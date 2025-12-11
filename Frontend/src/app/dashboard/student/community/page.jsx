@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { MessageSquare } from 'lucide-react';
@@ -125,7 +126,7 @@ export default function RealtimeChat() {
             {/* NAME ENTRY POPUP */}
             {showNamePopup && (
                 <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-                    <div className="bg-white rounded-xl shadow-lg max-w-md p-6">
+                    <div className=" rounded-xl shadow-lg max-w-md p-6">
                         <h1 className="text-xl font-semibold text-black">Enter your chat name</h1>
                         <p className="text-sm text-gray-500 mt-1">
                             This name will be visible to other participants in the community chat
@@ -149,7 +150,7 @@ export default function RealtimeChat() {
             )}
 
             {/* CHAT WINDOW */}
-            <div className="bg-white rounded-lg shadow">
+            <div className=" rounded-lg shadow">
                 {/* CHAT HEADER */}
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
                     <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center text-white font-semibold">
@@ -197,7 +198,7 @@ export default function RealtimeChat() {
                                     className={`max-w-xs p-3 rounded-lg shadow-sm ${
                                         mine
                                             ? 'bg-green-600 text-white rounded-br-none'
-                                            : 'bg-white text-gray-800 rounded-bl-none'
+                                            : ' text-gray-800 rounded-bl-none'
                                     }`}>
                                     <div className="break-words whitespace-pre-wrap text-sm">
                                         {m.text}
@@ -218,7 +219,7 @@ export default function RealtimeChat() {
                 </div>
 
                 {/* MESSAGE INPUT */}
-                <div className="px-4 py-3 border-t border-gray-200 bg-white">
+                <div className="px-4 py-3 border-t border-gray-200 ">
                     <div className="flex items-center justify-between gap-3">
                         <textarea
                             rows={1}

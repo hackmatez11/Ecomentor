@@ -11,8 +11,7 @@ import {
   Shield,
   Eye,
   EyeOff,
-  Sparkles,
-  CheckCircle2
+  Leaf
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -126,203 +125,179 @@ const handleAuth = async (e) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex justify-center items-center p-4 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-96 h-96 bg-green-200/40 rounded-full blur-3xl top-0 right-0 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-green-100/60 rounded-full blur-3xl bottom-0 left-0 animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute w-96 h-96 bg-emerald-200/30 rounded-full blur-3xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" style={{ animationDelay: '2s' }}></div>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#050505]">
+      {/* Background glow */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none">
+        <div className="w-[760px] h-[760px] rounded-full bg-emerald-500/15 blur-[150px]" />
       </div>
 
-      {/* Main card */}
-      <div className="relative w-full max-w-md">
-        <div className="bg-white rounded-3xl shadow-2xl border-2 border-green-100 overflow-hidden">
-          {/* Header with gradient */}
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-8 text-center relative">
-            <div className="relative">
-              <div className="w-20 h-20 mx-auto mb-4 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border-2 border-white/40 shadow-lg">
-                <Lock className="w-10 h-10 text-white" />
+      <div className="w-full max-w-lg relative z-10">
+        <div className="border border-emerald-900/50 rounded-3xl bg-[#0c0f0d] backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+          {/* Header */}
+          <div className="p-10 text-center space-y-3">
+            <div className="flex items-center justify-center">
+              <div className="h-14 w-14 rounded-full bg-emerald-400/20 flex items-center justify-center shadow-inner shadow-emerald-600/40">
+                <Leaf className="h-7 w-7 text-emerald-400" />
               </div>
-              <h2 className="text-3xl font-bold text-white mb-2">
-                {isLogin ? "Welcome Back" : "Join Us"}
-              </h2>
-              <p className="text-green-50 text-sm">
-                {isLogin ? "Sign in to your account" : "Create your new account"}
-              </p>
             </div>
+            <h2 className="text-2xl font-bold text-white">
+              {isLogin ? "Welcome to EcoMentor" : "Create your EcoMentor account"}
+            </h2>
+            <p className="text-sm text-emerald-100/70">
+              {isLogin
+                ? "Sign in to continue your learning journey"
+                : "Join to start your sustainability journey"}
+            </p>
           </div>
 
           {/* Form */}
-          <div className="p-8 space-y-6">
-            <div className="space-y-2">
-                  <label className="text-gray-700 text-sm font-semibold block">Full Name</label>
+          <div className="px-10 pb-10">
+            <div className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-1">
+                  <label className="text-emerald-50 text-sm font-semibold block">Full Name</label>
                   <input
                     type="text"
                     placeholder="Your full name"
-                    className="w-full px-4 py-3.5 bg-green-50/50 border-2 border-green-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white transition-all"
+                    className="w-full px-4 py-3 bg-[#0a0d0b] border border-emerald-900/60 rounded-xl text-emerald-50 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
                   />
                 </div>
+              )}
 
-            {/* Email input */}
-            <div className="space-y-2">
-              <label className="text-gray-700 text-sm font-semibold block">Email Address</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-600/60 group-focus-within:text-green-600 transition-colors pointer-events-none" />
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  className="w-full pl-12 pr-4 py-3.5 bg-green-50/50 border-2 border-green-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white transition-all"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Password input */}
-            <div className="space-y-2">
-              <label className="text-gray-700 text-sm font-semibold block">Password</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-green-600/60 group-focus-within:text-green-600 transition-colors pointer-events-none" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-3.5 bg-green-50/50 border-2 border-green-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white transition-all"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-green-600/60 hover:text-green-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Signup-only fields */}
-            {!isLogin && (
-              <>
-                {/* Full Name */}
-
-                {/* Institution Name */}
-                <div className="space-y-2">
-                  <label className="text-gray-700 text-sm font-semibold block">Institution Name</label>
+              <div className="space-y-1">
+                <label className="text-emerald-50 text-sm font-semibold block">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400/80" />
                   <input
-                    type="text"
-                    placeholder="Your school or university"
-                    className="w-full px-4 py-3.5 bg-green-50/50 border-2 border-green-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-green-500 focus:bg-white transition-all"
-                    value={institution}
-                    onChange={(e) => setInstitution(e.target.value)}
+                    type="email"
+                    placeholder="you@example.com"
+                    className="w-full pl-10 pr-4 py-3 bg-[#0a0d0b] border border-emerald-900/60 rounded-xl text-emerald-50 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
-
-                {/* Education Level */}
-                {role === "student" && (
-                <div className="space-y-2">
-                  <label className="text-gray-700 text-sm font-semibold block">Education Level</label>
-                  <select
-                    className="w-full px-4 py-3.5 bg-green-50/50 border-2 border-green-200 rounded-xl text-gray-800 focus:outline-none focus:border-green-500 focus:bg-white transition-all"
-                    value={educationLevel}
-                    onChange={(e) => setEducationLevel(e.target.value)}
-                    required
-                    
-                  >
-                    <option value="" disabled>Select level</option>
-                    {[...Array(12)].map((_, i) => (
-                      <option key={i + 1} value={`Grade ${i + 1}`}>Grade {i + 1}</option>
-                    ))}
-                    <option value="College/University">College/University</option>
-                  </select>
-                </div>
-                )}
-
-                {/* Role selector */}
-                <div className="space-y-2">
-                  <label className="text-gray-700 text-sm font-semibold block">Select Your Role</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {["student", "teacher", "administrator"].map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                          role === r
-                            ? "border-green-500 bg-green-50 shadow-lg shadow-green-200/50"
-                            : "border-green-200 bg-white hover:bg-green-50/50"
-                        }`}
-                      >
-                        <div className={`${role === r ? "text-green-600" : "text-gray-500"}`}>
-                          {roleIcons[r]}
-                        </div>
-                        <span className={`text-xs font-semibold capitalize ${role === r ? "text-green-700" : "text-gray-600"}`}>
-                          {r}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Error message */}
-            {error && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3">
-                <p className="text-red-600 text-sm text-center font-medium">{error}</p>
               </div>
-            )}
 
-            {/* Submit button */}
-            <button
-              type="button"
-              onClick={handleAuth}
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/30 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Processing...
-                </span>
-              ) : (
-                isLogin ? "Sign In" : "Create Account"
+              <div className="space-y-1">
+                <label className="text-emerald-50 text-sm font-semibold block">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400/80" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-12 py-3 bg-[#0a0d0b] border border-emerald-900/60 rounded-xl text-emerald-50 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400/80 hover:text-emerald-300"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Signup-only fields */}
+              {!isLogin && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-emerald-50 text-sm font-semibold block">Institution Name</label>
+                    <input
+                      type="text"
+                      placeholder="Your school or university"
+                      className="w-full px-4 py-3 bg-[#0a0d0b] border border-emerald-900/60 rounded-xl text-emerald-50 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                      value={institution}
+                      onChange={(e) => setInstitution(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  {role === "student" && (
+                    <div className="space-y-1">
+                      <label className="text-emerald-50 text-sm font-semibold block">Education Level</label>
+                      <select
+                        className="w-full px-4 py-3 bg-[#0a0d0b] border border-emerald-900/60 rounded-xl text-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                        value={educationLevel}
+                        onChange={(e) => setEducationLevel(e.target.value)}
+                        required
+                      >
+                        <option value="" disabled>Select level</option>
+                        {[...Array(12)].map((_, i) => (
+                          <option key={i + 1} value={`Grade ${i + 1}`}>Grade {i + 1}</option>
+                        ))}
+                        <option value="College/University">College/University</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-emerald-50 text-sm font-semibold block">Select Your Role</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {["student", "teacher", "administrator"].map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setRole(r)}
+                          className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-2 ${
+                            role === r
+                              ? "border-emerald-400 bg-emerald-900/30 shadow-sm"
+                              : "border-emerald-900/60 bg-[#0a0d0b] hover:bg-emerald-900/20"
+                          }`}
+                        >
+                          <div className={`${role === r ? "text-emerald-300" : "text-gray-400"}`}>
+                            {roleIcons[r]}
+                          </div>
+                          <span className={`text-xs font-semibold capitalize ${role === r ? "text-emerald-200" : "text-gray-400"}`}>
+                            {r}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
-            </button>
 
-            {/* Toggle auth mode */}
-            <div className="text-center pt-4">
+              {/* Error message */}
+              {error && (
+                <div className="bg-red-500/10 border border-red-400/60 rounded-xl p-3">
+                  <p className="text-red-200 text-sm text-center font-medium">{error}</p>
+                </div>
+              )}
+
+              {/* Submit */}
               <button
                 type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError(null);
-                }}
-                className="text-green-700 hover:text-green-800 text-sm font-semibold transition-colors inline-flex items-center gap-2 group"
+                onClick={handleAuth}
+                disabled={isLoading}
+                className="w-full bg-[#00ff63] hover:bg-[#00e65a] text-[#033015] font-semibold py-3 rounded-xl shadow-[0_15px_35px_rgba(0,255,99,0.35)] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isLogin ? (
-                  <>
-                    Need an account?
-                    <span className="underline decoration-2 underline-offset-4 group-hover:text-emerald-700">Sign up</span>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?
-                    <span className="underline decoration-2 underline-offset-4 group-hover:text-emerald-700">Sign in</span>
-                  </>
-                )}
+                {isLoading ? "Processing..." : isLogin ? "Sign In" : "Create Account"}
               </button>
+
+              {/* Toggle */}
+              <div className="text-center text-sm text-gray-300">
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setError(null);
+                  }}
+                  className="text-[#00ff63] font-semibold hover:underline"
+                >
+                  {isLogin ? "Sign up" : "Sign in"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Decorative elements */}
-        <div className="absolute -z-10 inset-0 bg-gradient-to-r from-green-200/40 to-emerald-200/40 blur-3xl rounded-3xl transform scale-105"></div>
       </div>
     </div>
   );

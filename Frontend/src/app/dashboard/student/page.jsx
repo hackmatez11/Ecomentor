@@ -1,33 +1,26 @@
 "use client";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation.js";
+import { useSearchParams } from "next/navigation";
 import { 
-  Home, 
-  Brain,
-  BookOpen, 
-  Trophy, 
-  MessageSquare, 
-  Briefcase, 
-  User, 
-  Bell, 
-  LogOut,
+  MessageSquare,
+  Trophy ,
+  BookOpen ,
   Target,
   Upload,
   CheckCircle,
   Clock,
   Award,
-  Leaf,
   TrendingUp,
-  Users,
-  Bot
+  ArrowRight,
+  Zap,
+  Briefcase
 } from "lucide-react";
 import QuizGenerator from "./QuizGenerator.jsx";
-import RealtimeChat from "./RealtimeChat.jsx";
 
 export default function StudentDashboard() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState("home");
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") || "home";
   const [user, setUser] = useState(null);
   const [studentData, setStudentData] = useState({
     ecoPoints: 0,
@@ -42,22 +35,16 @@ export default function StudentDashboard() {
       plasticReduced: 0
     }
   });
-  const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [learningPaths, setLearningPaths] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
-  const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
-  const [showEcoBot, setShowEcoBot] = useState(false);
-  const [ecoBotInput, setEcoBotInput] = useState("");
 
   useEffect(() => {
     fetchUserData();
     fetchLearningPaths();
     fetchSubmissions();
     fetchOpportunities();
-    fetchNotifications();
   }, []);
 
   const fetchUserData = async () => {
@@ -109,19 +96,6 @@ export default function StudentDashboard() {
     ]);
   };
 
-  const fetchNotifications = () => {
-    // Mock data
-    setNotifications([
-      { id: 1, message: "Your tree planting submission was approved! +150 points", time: "2 hours ago", read: false },
-      { id: 2, message: "New opportunity: Green Peace Internship", time: "5 hours ago", read: false },
-      { id: 3, message: "You've reached Rank 12 on the leaderboard!", time: "1 day ago", read: true }
-    ]);
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
 
   const sendChatMessage = () => {
     if (chatInput.trim()) {
@@ -139,197 +113,264 @@ export default function StudentDashboard() {
     }
   };
 
-  const sendEcoBotMessage = () => {
-    if (ecoBotInput.trim()) {
-      setChatMessages([...chatMessages, { text: ecoBotInput, sender: "user", time: new Date() }]);
-      setEcoBotInput("");
-      // Simulate AI response
-      setTimeout(() => {
-        setChatMessages(prev => [...prev, { 
-          text: "Based on your progress, I recommend focusing on the Water Conservation module next. You're doing great with 1250 EcoPoints!", 
-          sender: "bot", 
-          time: new Date() 
-        }]);
-      }, 1500);
-    }
-  };
 
-  const renderHome = () => (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">Welcome back, {user?.email?.split('@')[0]}! 🌱</h2>
-        <p className="text-green-100">You're making a real difference. Keep up the amazing work!</p>
-      </div>
+  const renderHome = () => {
+    const leaderboardPreview = [
+      { rank: 1, name: "Sarah Chen", points: 2850 },
+      { rank: 2, name: "Marcus Johnson", points: 2640 },
+      { rank: 3, name: "Emily Rodriguez", points: 2420 },
+    ];
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">EcoPoints</p>
-              <p className="text-2xl font-bold text-gray-800">{studentData.ecoPoints}</p>
-            </div>
-            <Award className="text-yellow-500" size={32} />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Leaderboard Rank</p>
-              <p className="text-2xl font-bold text-gray-800">#{studentData.rank}</p>
-            </div>
-            <Trophy className="text-blue-500" size={32} />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Completed Tasks</p>
-              <p className="text-2xl font-bold text-gray-800">{studentData.completedTasks}</p>
-            </div>
-            <CheckCircle className="text-green-500" size={32} />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Pending Reviews</p>
-              <p className="text-2xl font-bold text-gray-800">{studentData.pendingSubmissions}</p>
-            </div>
-            <Clock className="text-orange-500" size={32} />
-          </div>
-        </div>
-      </div>
-
-      {/* Environmental Impact */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Leaf className="text-green-600" />
-          Your Environmental Impact
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <p className="text-3xl font-bold text-green-600">{studentData.environmentalImpact.co2Saved} kg</p>
-            <p className="text-gray-600 text-sm mt-1">CO₂ Reduced</p>
-          </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <p className="text-3xl font-bold text-blue-600">{studentData.environmentalImpact.treesPlanted}</p>
-            <p className="text-gray-600 text-sm mt-1">Trees Equivalent</p>
-          </div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg">
-            <p className="text-3xl font-bold text-purple-600">{studentData.environmentalImpact.plasticReduced} kg</p>
-            <p className="text-gray-600 text-sm mt-1">Plastic Saved</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-bold mb-4">Recent Submissions</h3>
-        <div className="space-y-3">
-          {submissions.slice(0, 3).map(sub => (
-            <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                {sub.status === "approved" && <CheckCircle className="text-green-500" size={20} />}
-                {sub.status === "pending" && <Clock className="text-orange-500" size={20} />}
-                {sub.status === "under_review" && <TrendingUp className="text-blue-500" size={20} />}
-                <div>
-                  <p className="font-medium text-gray-800">{sub.action}</p>
-                  <p className="text-sm text-gray-500">{sub.date}</p>
-                </div>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                sub.status === "approved" ? "bg-green-100 text-green-700" :
-                sub.status === "pending" ? "bg-orange-100 text-orange-700" :
-                "bg-blue-100 text-blue-700"
-              }`}>
-                {sub.status === "approved" ? `+${sub.points}` : sub.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderLearning = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold mb-4">Personalized Learning Paths</h2>
-        <p className="text-gray-600 mb-6">AI-curated modules tailored for {studentData.level} level</p>
-        
-        <div className="space-y-4">
-          {learningPaths.map(path => (
-            <div key={path.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-bold text-lg">{path.title}</h3>
-                  <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                    {path.difficulty}
-                  </span>
-                </div>
-                <span className="text-green-600 font-bold">{path.points} pts</span>
-              </div>
-              
-              <div className="mb-3">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">Progress</span>
-                  <span className="text-gray-800 font-medium">{path.progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-500 h-2 rounded-full transition-all"
-                    style={{ width: `${path.progress}%` }}
-                  />
-                </div>
-              </div>
-              
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg transition-colors">
-                {path.progress > 0 ? "Continue Learning" : "Start Module"}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Submit Action */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Upload className="text-green-600" />
-          Submit Eco-Action
-        </h3>
-        <div className="space-y-4">
+    return (
+      <div className="space-y-8">
+        {/* Welcome Header */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Action Description</label>
-            <textarea 
-              className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              rows="3"
-              placeholder="Describe your environmental action..."
-            />
+            <h2 className="text-3xl font-bold mb-1 text-white">
+              Welcome back, {user?.email?.split("@")[0] || "EcoMentor"}! 🌱
+            </h2>
+            <p className="text-gray-400">
+              Continue your journey to make a positive environmental impact
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Upload Evidence (Photo/Video)</label>
-            <input 
-              type="file" 
-              className="w-full border rounded-lg p-2"
-              accept="image/*,video/*"
-            />
-          </div>
-          <button className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors">
-            Submit for AI Verification
+          <button
+            onClick={() => setShowEcoBot(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-200/50 transition-colors"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Chat with EcoBot
           </button>
         </div>
+
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-5 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between pb-1">
+              <p className="text-sm text-gray-500">Total EcoPoints</p>
+              <Award className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div className="text-2xl font-bold text-emerald-400">{studentData.ecoPoints}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              <span className="text-emerald-400 font-semibold">+125</span> this week
+            </p>
+          </div>
+
+          <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-5 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between pb-1">
+              <p className="text-sm text-gray-400">Learning Paths</p>
+              <BookOpen className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-bold text-white">{learningPaths.length}</div>
+            <p className="text-xs text-gray-500 mt-1">Active modules in progress</p>
+          </div>
+
+          <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-5 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between pb-1">
+              <p className="text-sm text-gray-400">Tasks Completed</p>
+              <Target className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-bold text-white">{studentData.completedTasks}</div>
+            <p className="text-xs text-gray-500 mt-1">{studentData.pendingSubmissions} pending review</p>
+          </div>
+
+          <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-5 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between pb-1">
+              <p className="text-sm text-gray-400">Global Rank</p>
+              <Trophy className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-bold text-white">#{studentData.rank}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              <span className="text-emerald-400 font-semibold">↑ 2</span> positions
+            </p>
+          </div>
+        </div>
+
+        {/* Learning Paths */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-white">Your Learning Paths</h3>
+              <a
+                href="/dashboard/student/learning"
+                className="text-emerald-400 font-semibold inline-flex items-center gap-2 hover:text-emerald-300"
+              >
+                View All <ArrowRight className="h-4 w-4" />
+              </a>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {learningPaths.slice(0, 2).map((path) => (
+              <div key={path.id} className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-5 hover:shadow-lg transition-shadow">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-white mb-1">{path.title}</h4>
+                    <p className="text-sm text-gray-400">Difficulty: {path.difficulty}</p>
+                  </div>
+                  <span className="px-3 py-1 text-xs rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                    {path.points} pts
+                  </span>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm text-gray-400">
+                    <span>Progress</span>
+                    <span className="font-semibold text-emerald-300">{path.progress}%</span>
+                  </div>
+                  <div className="w-full bg-[#1a1a1a] rounded-full h-2">
+                    <div
+                      className="bg-emerald-400 h-2 rounded-full transition-all"
+                      style={{ width: `${path.progress}%` }}
+                    />
+                  </div>
+                </div>
+                <a
+                  href="/dashboard/student/learning"
+                  className="mt-4 w-full inline-flex items-center justify-center bg-emerald-500 hover:bg-emerald-400 text-[#04210f] py-2 rounded-xl font-semibold transition-colors"
+                >
+                  {path.progress > 0 ? "Continue" : "Start Learning"}
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Active Tasks & Sidebar */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Active Tasks */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-white">Active Tasks</h3>
+                <a
+                  href="/dashboard/student/learning"
+                  className="text-sm text-emerald-400 hover:text-emerald-300 font-semibold"
+                >
+                  Go to tasks
+                </a>
+            </div>
+            {submissions.map((sub) => (
+                <div key={sub.id} className="bg-[#0f0f0f] rounded-2xl border border-[#1a1a1a] p-4 shadow-sm hover:shadow-lg transition-shadow">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-white">{sub.action}</h4>
+                      <span
+                        className={`text-xs px-3 py-1 rounded-full ${
+                          sub.status === "approved"
+                            ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                            : sub.status === "pending"
+                            ? "bg-amber-500/15 text-amber-200 border border-amber-500/30"
+                            : "bg-blue-500/15 text-blue-200 border border-blue-500/30"
+                        }`}
+                      >
+                        {sub.status}
+                      </span>
+                    </div>
+                      <p className="text-sm text-gray-400 mb-2">Points: {sub.points}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                          <Zap className="h-3 w-3 text-emerald-400" />
+                        {studentData.level}
+                      </span>
+                      <span>{sub.date}</span>
+                    </div>
+                  </div>
+                    <button className="text-sm font-semibold text-emerald-400 hover:text-emerald-300">
+                    View
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sidebar: EcoBot + Leaderboard */}
+          <div className="space-y-4">
+              <div className="bg-gradient-to-br from-[#0f0f0f] to-[#0b0b0b] rounded-2xl border border-[#1a1a1a] shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-5 w-5 text-emerald-400" />
+                  <h4 className="font-semibold text-white">EcoBot Assistant</h4>
+              </div>
+                <p className="text-sm text-gray-400 mb-3">
+                "Based on your progress, explore renewable energy next!"
+              </p>
+              <button
+                onClick={() => setShowEcoBot(true)}
+                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#04210f] font-semibold py-2 rounded-xl shadow-md shadow-emerald-500/30"
+              >
+                Start Conversation
+              </button>
+            </div>
+
+              <div className="bg-[#0f0f0f] rounded-2xl border border-[#1a1a1a] shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-3">
+                  <Trophy className="h-5 w-5 text-emerald-400" />
+                  <h4 className="font-semibold text-white">Top Performers</h4>
+              </div>
+              <div className="space-y-3">
+                {leaderboardPreview.map((entry) => (
+                  <div key={entry.rank} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                          entry.rank === 1 ? "bg-emerald-500/20 text-emerald-300" : "bg-[#111] text-gray-300"
+                        }`}
+                      >
+                        {entry.rank}
+                      </div>
+                        <span className="font-medium text-white">{entry.name}</span>
+                    </div>
+                      <span className="text-sm font-semibold text-emerald-300">{entry.points}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setActiveTab("leaderboard")}
+                  className="w-full mt-4 text-sm font-semibold text-emerald-400 hover:text-emerald-300 border border-[#1a1a1a] rounded-xl py-2"
+              >
+                View Full Leaderboard
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* NGO Opportunities */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-white">NGO Opportunities</h3>
+            <button
+              onClick={() => setActiveTab("opportunities")}
+              className="text-emerald-400 font-semibold inline-flex items-center gap-2 hover:text-emerald-300"
+            >
+              View all <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {opportunities.map((opportunity) => (
+              <div key={opportunity.id} className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-5 hover:shadow-lg transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                    {opportunity.duration}
+                  </span>
+                  <span className="text-xs text-gray-500">+{opportunity.minPoints} pts</span>
+                </div>
+                <h4 className="text-lg font-semibold text-white">{opportunity.title}</h4>
+                <p className="text-sm text-gray-400 mb-2">by {opportunity.ngo}</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Minimum required: {opportunity.minPoints} EcoPoints
+                </p>
+                <button
+                  onClick={() => setActiveTab("opportunities")}
+                  className="w-full text-sm font-semibold text-emerald-400 hover:text-emerald-300 border border-[#1a1a1a] rounded-xl py-2"
+                >
+                  Learn More
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderLeaderboard = () => (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+    <div className="bg-[#18181b] rounded-2xl border border-zinc-800 p-6 shadow-xl">
+      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
         <Trophy className="text-yellow-500" />
         Community Leaderboard
       </h2>
@@ -343,32 +384,49 @@ export default function StudentDashboard() {
         ].map(student => (
           <div 
             key={student.rank}
-            className={`flex items-center justify-between p-4 rounded-lg ${
-              student.highlight ? "bg-green-50 border-2 border-green-500" : "bg-gray-50"
+            className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+              student.highlight 
+                ? "bg-emerald-900/10 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]" 
+                : "bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800"
             }`}
           >
             <div className="flex items-center gap-4">
-              <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${
-                student.rank === 1 ? "bg-yellow-400 text-yellow-900" :
-                student.rank === 2 ? "bg-gray-300 text-gray-700" :
-                student.rank === 3 ? "bg-orange-400 text-orange-900" :
-                "bg-gray-200 text-gray-600"
+              {/* Rank Number Badge */}
+              <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold shadow-lg ${
+                student.rank === 1 ? "bg-yellow-500 text-black" :
+                student.rank === 2 ? "bg-zinc-400 text-black" :
+                student.rank === 3 ? "bg-orange-500 text-black" :
+                "bg-zinc-800 text-gray-500"
               }`}>
                 {student.rank}
               </div>
-              <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold">
+              
+              {/* Avatar Circle */}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border ${
+                 student.highlight 
+                 ? "bg-emerald-500 text-black border-emerald-400" 
+                 : "bg-zinc-800 text-emerald-400 border-zinc-700"
+              }`}>
                 {student.avatar}
               </div>
+              
+              {/* User Info */}
               <div>
-                <p className="font-bold text-gray-800">{student.name}</p>
-                <p className="text-sm text-gray-500">{student.points} EcoPoints</p>
+                <p className={`font-bold ${student.highlight ? "text-emerald-400" : "text-white"}`}>
+                  {student.name}
+                </p>
+                <p className="text-sm text-gray-400">
+                  <span className="text-emerald-500 font-medium">{student.points}</span> EcoPoints
+                </p>
               </div>
             </div>
+  
+            {/* Trophy Icon for Top 3 */}
             {student.rank <= 3 && (
               <Trophy className={
-                student.rank === 1 ? "text-yellow-500" :
-                student.rank === 2 ? "text-gray-400" :
-                "text-orange-400"
+                student.rank === 1 ? "text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" :
+                student.rank === 2 ? "text-zinc-400" :
+                "text-orange-500"
               } size={24} />
             )}
           </div>
@@ -377,83 +435,98 @@ export default function StudentDashboard() {
     </div>
   );
 
-  const renderCommunity = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <MessageSquare className="text-blue-600" />
-          Community Chat
-        </h2>
+  // const renderCommunity = () => (
+  //   <div className="space-y-6">
+  //     <div className=" rounded-lg shadow p-6">
+  //       <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+  //         <MessageSquare className="text-blue-600" />
+  //         Community Chat
+  //       </h2>
         
-        <div className="border rounded-lg h-96 flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {chatMessages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-xs p-3 rounded-lg ${
-                  msg.sender === "user" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-800"
-                }`}>
-                  {msg.sender === "other" && <p className="text-xs font-bold mb-1">{msg.name}</p>}
-                  <p>{msg.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+  //       <div className="border rounded-lg h-96 flex flex-col">
+  //         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+  //           {chatMessages.map((msg, idx) => (
+  //             <div key={idx} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+  //               <div className={`max-w-xs p-3 rounded-lg ${
+  //                 msg.sender === "user" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-800"
+  //               }`}>
+  //                 {msg.sender === "other" && <p className="text-xs font-bold mb-1">{msg.name}</p>}
+  //                 <p>{msg.text}</p>
+  //               </div>
+  //             </div>
+  //           ))}
+  //         </div>
           
-          <div className="border-t p-4 flex gap-2">
-            <input 
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
-              className="flex-1 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="Type a message..."
-            />
-            <button 
-              onClick={sendChatMessage}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
-            >
-              Send
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  //         <div className="border-t p-4 flex gap-2">
+  //           <input 
+  //             type="text"
+  //             value={chatInput}
+  //             onChange={(e) => setChatInput(e.target.value)}
+  //             onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
+  //             className="flex-1 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+  //             placeholder="Type a message..."
+  //           />
+  //           <button 
+  //             onClick={sendChatMessage}
+  //             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
+  //           >
+  //             Send
+  //           </button>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
 
   const renderOpportunities = () => (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <Briefcase className="text-purple-600" />
+    <div className="bg-[#18181b] rounded-2xl border border-zinc-800 p-6 shadow-xl">
+      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
+        <Briefcase className="text-emerald-500" />
         NGO Opportunities
       </h2>
       
       <div className="space-y-4">
         {opportunities.map(opp => (
-          <div key={opp.id} className="border rounded-lg p-5 hover:shadow-md transition-shadow">
+          <div 
+            key={opp.id} 
+            className="bg-zinc-900/30 border border-zinc-800 rounded-xl p-5 hover:border-emerald-500/30 hover:bg-zinc-900 transition-all group"
+          >
             <div className="flex justify-between items-start mb-3">
               <div>
-                <h3 className="font-bold text-lg text-gray-800">{opp.title}</h3>
-                <p className="text-gray-600 text-sm mt-1">by {opp.ngo}</p>
+                <h3 className="font-bold text-lg text-white group-hover:text-emerald-400 transition-colors">
+                  {opp.title}
+                </h3>
+                <p className="text-gray-400 text-sm mt-1">
+                  by <span className="text-gray-300">{opp.ngo}</span>
+                </p>
               </div>
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full font-medium">
+              {/* Green Badge */}
+              <span className="px-3 py-1 bg-emerald-900/20 text-emerald-300 border border-emerald-900/50 text-sm rounded-full font-medium">
                 {opp.duration}
               </span>
             </div>
             
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-1">Minimum Required:</p>
-              <p className="text-gray-800 font-medium">{opp.minPoints} EcoPoints</p>
+            <div className="mb-4 bg-black/40 rounded-lg p-3 border border-zinc-800">
+              <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider font-semibold">
+                Minimum Required
+              </p>
+              <p className="text-white font-bold text-lg flex items-center gap-2">
+                {opp.minPoints} <span className="text-emerald-500 text-sm font-normal">EcoPoints</span>
+              </p>
             </div>
             
             <button 
               disabled={studentData.ecoPoints < opp.minPoints}
-              className={`w-full py-2 rounded-lg font-medium transition-colors ${
+              className={`w-full py-3 rounded-lg font-bold transition-all ${
                 studentData.ecoPoints >= opp.minPoints
-                  ? "bg-purple-600 hover:bg-purple-700 text-white"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                  : "bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed opacity-70"
               }`}
             >
-              {studentData.ecoPoints >= opp.minPoints ? "Apply Now" : `Need ${opp.minPoints - studentData.ecoPoints} more points`}
+              {studentData.ecoPoints >= opp.minPoints 
+                ? "Apply Now" 
+                : `Need ${opp.minPoints - studentData.ecoPoints} more points`
+              }
             </button>
           </div>
         ))}
@@ -462,48 +535,53 @@ export default function StudentDashboard() {
   );
 
   const renderProfile = () => (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
+    <div className="bg-[#18181b] rounded-2xl border border-zinc-800 p-6 shadow-xl">
+      <h2 className="text-2xl font-bold mb-6 text-white">Profile Settings</h2>
       
-      <div className="space-y-4">
+      <div className="space-y-5">
+        {/* Email Field (Disabled) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+          <label className="block text-sm font-semibold text-gray-400 mb-2">Email</label>
           <input 
             type="email"
             value={user?.email || ""}
             disabled
-            className="w-full border rounded-lg p-3 bg-gray-50"
+            className="w-full bg-zinc-900/50 border border-zinc-800 text-gray-500 rounded-lg p-3 cursor-not-allowed"
           />
         </div>
         
+        {/* Education Level */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Education Level</label>
-          <select className="w-full border rounded-lg p-3">
+          <label className="block text-sm font-semibold text-gray-300 mb-2">Education Level</label>
+          <select className="w-full bg-black border-2 border-zinc-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all">
             <option value="school">School</option>
             <option value="college">College</option>
           </select>
         </div>
         
+        {/* Classroom Code */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Classroom Code</label>
+          <label className="block text-sm font-semibold text-gray-300 mb-2">Classroom Code</label>
           <input 
             type="text"
             value={studentData.classroom || ""}
-            className="w-full border rounded-lg p-3"
+            className="w-full bg-black border-2 border-zinc-700 text-white rounded-lg p-3 placeholder-zinc-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
             placeholder="Enter classroom code"
           />
         </div>
         
+        {/* Interests */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Interests</label>
+          <label className="block text-sm font-semibold text-gray-300 mb-2">Interests</label>
           <input 
             type="text"
-            className="w-full border rounded-lg p-3"
+            className="w-full bg-black border-2 border-zinc-700 text-white rounded-lg p-3 placeholder-zinc-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
             placeholder="e.g., Climate Change, Renewable Energy"
           />
         </div>
         
-        <button className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors">
+        {/* Save Button */}
+        <button className="w-full mt-4 bg-emerald-500 hover:bg-emerald-400 text-black py-3 rounded-lg font-bold text-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)]">
           Save Changes
         </button>
       </div>
@@ -511,210 +589,12 @@ export default function StudentDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation Bar */}
-      <nav className="bg-white shadow-md border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <Leaf className="text-green-600" size={32} />
-              <h1 className="text-2xl font-bold text-gray-800">EcoMentor</h1>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Bell size={24} className="text-gray-700" />
-                {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </button>
-              
-              <button 
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <LogOut size={20} />
-                <span className="font-medium">Logout</span>
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Notifications Dropdown */}
-        {showNotifications && (
-          <div className="absolute right-4 top-20 w-80 bg-white rounded-lg shadow-xl border z-50">
-            <div className="p-4 border-b">
-              <h3 className="font-bold text-gray-800">Notifications</h3>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              {notifications.map(notif => (
-                <div 
-                  key={notif.id}
-                  className={`p-4 border-b hover:bg-gray-50 ${!notif.read ? "bg-blue-50" : ""}`}
-                >
-                  <p className="text-sm text-gray-800">{notif.message}</p>
-                  <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-12 gap-6">
-          {/* Sidebar */}
-          <div className="col-span-12 lg:col-span-3">
-            <div className="bg-white rounded-lg shadow p-4 space-y-2 sticky top-6">
-              <button
-                onClick={() => setActiveTab("home")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === "home" ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Home size={20} />
-                <span className="font-medium">Home</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("learning")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === "learning" ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <BookOpen size={20} />
-                <span className="font-medium">Learning</span>
-              </button>
-              <button
-                  onClick={() => setActiveTab("quiz")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === "quiz" ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
-                  <Brain size={20} />
-                  <span className="font-medium">AI Quizzes</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("leaderboard")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === "leaderboard" ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Trophy size={20} />
-                <span className="font-medium">Leaderboard</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("community")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === "community" ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <MessageSquare size={20} />
-                <span className="font-medium">Community</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("opportunities")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === "opportunities" ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Briefcase size={20} />
-                <span className="font-medium">Opportunities</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("profile")}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeTab === "profile" ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <User size={20} />
-                <span className="font-medium">Profile</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="col-span-12 lg:col-span-9">
-            {activeTab === "home" && renderHome()}
-            {activeTab === "learning" && renderLearning()}
-            {activeTab === "leaderboard" && renderLeaderboard()}
-            {activeTab === "community" && <RealtimeChat />}
-            {activeTab === "opportunities" && renderOpportunities()}
-            {activeTab === "profile" && renderProfile()}
-            {activeTab === "quiz" && <QuizGenerator />}
-          </div>
-        </div>
-      </div>
-
-      {/* EcoBot Floating Button */}
-      <button
-        onClick={() => setShowEcoBot(!showEcoBot)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110"
-      >
-        <Bot size={28} />
-      </button>
-
-      {/* EcoBot Chat Window */}
-      {showEcoBot && (
-        <div className="fixed bottom-24 right-6 w-96 bg-white rounded-lg shadow-2xl border overflow-hidden z-50">
-          <div className="bg-green-600 text-white p-4 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Bot size={24} />
-              <h3 className="font-bold">EcoBot Assistant</h3>
-            </div>
-            <button 
-              onClick={() => setShowEcoBot(false)}
-              className="text-white hover:text-gray-200"
-            >
-              ✕
-            </button>
-          </div>
-          
-          <div className="h-96 overflow-y-auto p-4 space-y-3 bg-gray-50">
-            <div className="flex justify-start">
-              <div className="max-w-xs p-3 rounded-lg bg-white shadow-sm">
-                <p className="text-sm">Hi! I'm EcoBot 🌱 Ask me about your progress, learning paths, or eco-actions!</p>
-              </div>
-            </div>
-            
-            {chatMessages.filter(m => m.sender === "user" || m.sender === "bot").map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-xs p-3 rounded-lg ${
-                  msg.sender === "user" 
-                    ? "bg-green-600 text-white" 
-                    : "bg-white text-gray-800 shadow-sm"
-                }`}>
-                  <p className="text-sm">{msg.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="border-t p-3 bg-white">
-            <div className="flex gap-2">
-              <input 
-                type="text"
-                value={ecoBotInput}
-                onChange={(e) => setEcoBotInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && sendEcoBotMessage()}
-                className="flex-1 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="Ask EcoBot..."
-              />
-              <button 
-                onClick={sendEcoBotMessage}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    <>
+      {activeTab === "home" && renderHome()}
+      {activeTab === "leaderboard" && renderLeaderboard()}
+      {activeTab === "opportunities" && renderOpportunities()}
+      {activeTab === "profile" && renderProfile()}
+      {activeTab === "quiz" && <QuizGenerator />}
+    </>
   );
 }
