@@ -25,6 +25,7 @@ export default function ReviewActionsPage() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState("all");
     const [selectedSubmission, setSelectedSubmission] = useState(null);
+    const [apiCounts, setApiCounts] = useState({ all: 0, ai_flagged: 0, pending_review: 0, reviewed: 0 });
     const [teacherId, setTeacherId] = useState(null);
     const [processing, setProcessing] = useState(false);
 
@@ -49,7 +50,7 @@ export default function ReviewActionsPage() {
             // Fetch submissions from API
             const params = new URLSearchParams({
                 teacherId: user.id,
-                ...(filter !== "all" && { status: filter })
+                status: filter // Pass the filter directly
             });
 
             const response = await fetch(`/api/submissions?${params}`);
@@ -57,6 +58,9 @@ export default function ReviewActionsPage() {
 
             if (data.success) {
                 setSubmissions(data.submissions || []);
+                if (data.counts) {
+                    setApiCounts(data.counts);
+                }
             }
         } catch (error) {
             console.error("Error fetching submissions:", error);
@@ -87,8 +91,12 @@ export default function ReviewActionsPage() {
             const result = await response.json();
 
             if (result.success) {
-                // Remove from list
-                setSubmissions(prev => prev.filter(s => s._id !== submission._id));
+                // If we are in restricted view, remove it. Otherwise refresh.
+                if (filter === "pending_review" || filter === "ai_flagged") {
+                    setSubmissions(prev => prev.filter(s => s._id !== submission._id));
+                } else {
+                    fetchTeacherAndSubmissions();
+                }
                 setSelectedSubmission(null);
                 alert(`✅ Action approved! ${points} points awarded to ${submission.studentName}`);
             } else {
@@ -125,7 +133,11 @@ export default function ReviewActionsPage() {
             const result = await response.json();
 
             if (result.success) {
-                setSubmissions(prev => prev.filter(s => s._id !== submission._id));
+                if (filter === "pending_review" || filter === "ai_flagged") {
+                    setSubmissions(prev => prev.filter(s => s._id !== submission._id));
+                } else {
+                    fetchTeacherAndSubmissions();
+                }
                 setSelectedSubmission(null);
                 alert(`❌ Action rejected. Student has been notified.`);
             } else {
@@ -159,11 +171,6 @@ export default function ReviewActionsPage() {
         return labels[status] || "Unknown";
     };
 
-    const counts = {
-        all: submissions.length,
-        ai_flagged: submissions.filter(s => s.status === "ai_flagged").length,
-        pending_review: submissions.filter(s => s.status === "pending_review").length
-    };
 
     return (
         <div className="min-h-screen bg-[#050505] text-gray-100 p-4 md:p-8">
@@ -199,9 +206,10 @@ export default function ReviewActionsPage() {
                         onChange={(e) => setFilter(e.target.value)}
                         className="bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
                     >
-                        <option value="all">All Submissions ({counts.all})</option>
-                        <option value="ai_flagged">AI Flagged ({counts.ai_flagged})</option>
-                        <option value="pending_review">Pending Review ({counts.pending_review})</option>
+                        <option value="all">All Submissions ({apiCounts.all})</option>
+                        <option value="ai_flagged">AI Flagged ({apiCounts.ai_flagged})</option>
+                        <option value="pending_review">Pending Review ({apiCounts.pending_review})</option>
+                        <option value="reviewed">History / Reviewed ({apiCounts.reviewed})</option>
                     </select>
                 </div>
 
@@ -327,29 +335,53 @@ export default function ReviewActionsPage() {
 
                                         {/* Action Buttons */}
                                         <div className="space-y-3">
-                                            <button
-                                                onClick={() => setSelectedSubmission(submission)}
-                                                className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                                View Details
-                                            </button>
-                                            <button
-                                                onClick={() => handleApprove(submission)}
-                                                disabled={processing}
-                                                className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-700 text-emerald-950 disabled:text-gray-500 py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-                                            >
-                                                <ThumbsUp className="h-4 w-4" />
-                                                Approve
-                                            </button>
-                                            <button
-                                                onClick={() => handleReject(submission)}
-                                                disabled={processing}
-                                                className="w-full bg-red-500/20 hover:bg-red-500/30 disabled:bg-gray-700 text-red-300 disabled:text-gray-500 border border-red-500/30 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <ThumbsDown className="h-4 w-4" />
-                                                Reject
-                                            </button>
+                                            {submission.status === 'approved' || submission.status === 'rejected' ? (
+                                                <div className={`p-4 rounded-xl border flex flex-col gap-2 ${submission.status === 'approved'
+                                                    ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-300'
+                                                    : 'bg-red-500/5 border-red-500/20 text-red-300'
+                                                    }`}>
+                                                    <div className="flex items-center gap-2 font-bold uppercase text-xs tracking-widest">
+                                                        {submission.status === 'approved' ? <ThumbsUp size={14} /> : <ThumbsDown size={14} />}
+                                                        {submission.status.toUpperCase()}
+                                                    </div>
+                                                    {submission.status === 'approved' && (
+                                                        <div className="text-sm font-semibold">
+                                                            Awarded: {submission.finalPoints || submission.aiVerification?.suggestedPoints || 0} pts
+                                                        </div>
+                                                    )}
+                                                    {submission.teacherNotes && (
+                                                        <div className="text-xs italic opacity-80 mt-1">
+                                                            " {submission.teacherNotes} "
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => setSelectedSubmission(submission)}
+                                                        className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                        View Details
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleApprove(submission)}
+                                                        disabled={processing}
+                                                        className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-700 text-emerald-950 disabled:text-gray-500 py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                                                    >
+                                                        <ThumbsUp className="h-4 w-4" />
+                                                        Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleReject(submission)}
+                                                        disabled={processing}
+                                                        className="w-full bg-red-500/20 hover:bg-red-500/30 disabled:bg-gray-700 text-red-300 disabled:text-gray-500 border border-red-500/30 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <ThumbsDown className="h-4 w-4" />
+                                                        Reject
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -406,22 +438,51 @@ export default function ReviewActionsPage() {
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex flex-col md:flex-row gap-3 pt-4">
-                                    <button
-                                        onClick={() => handleApprove(selectedSubmission)}
-                                        disabled={processing}
-                                        className="flex-1 bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-700 text-emerald-950 disabled:text-gray-500 py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
-                                    >
-                                        {processing ? "Processing..." : "Approve & Award Points"}
-                                    </button>
-                                    <button
-                                        onClick={() => handleReject(selectedSubmission)}
-                                        disabled={processing}
-                                        className="flex-1 bg-red-500/20 hover:bg-red-500/30 disabled:bg-gray-700 text-red-300 disabled:text-gray-500 border border-red-500/30 py-4 rounded-2xl font-bold transition-all"
-                                    >
-                                        {processing ? "Processing..." : "Reject Submission"}
-                                    </button>
-                                </div>
+                                {selectedSubmission.status === 'approved' || selectedSubmission.status === 'rejected' ? (
+                                    <div className={`mt-6 p-6 rounded-2xl border text-center ${selectedSubmission.status === 'approved'
+                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                        : 'bg-red-500/10 border-red-500/20 text-red-400'
+                                        }`}>
+                                        <div className="flex items-center justify-center gap-3 font-bold text-xl uppercase tracking-widest mb-2">
+                                            {selectedSubmission.status === 'approved' ? <ThumbsUp size={24} /> : <ThumbsDown size={24} />}
+                                            {selectedSubmission.status.toUpperCase()}
+                                        </div>
+                                        {selectedSubmission.status === 'approved' && (
+                                            <p className="text-lg font-semibold mb-2">
+                                                Awarded: {selectedSubmission.finalPoints || selectedSubmission.aiVerification?.suggestedPoints || 0} Points
+                                            </p>
+                                        )}
+                                        {selectedSubmission.teacherNotes && (
+                                            <div className="mt-4 pt-4 border-t border-white/10">
+                                                <p className="text-xs text-gray-500 uppercase mb-2 font-bold">Your Notes</p>
+                                                <p className="italic text-gray-300">"{selectedSubmission.teacherNotes}"</p>
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={() => setSelectedSubmission(null)}
+                                            className="mt-6 px-8 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white font-semibold transition-all"
+                                        >
+                                            Close Record
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col md:flex-row gap-3 pt-4">
+                                        <button
+                                            onClick={() => handleApprove(selectedSubmission)}
+                                            disabled={processing}
+                                            className="flex-1 bg-emerald-500 hover:bg-emerald-400 disabled:bg-gray-700 text-emerald-950 disabled:text-gray-500 py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                                        >
+                                            {processing ? "Processing..." : "Approve & Award Points"}
+                                        </button>
+                                        <button
+                                            onClick={() => handleReject(selectedSubmission)}
+                                            disabled={processing}
+                                            className="flex-1 bg-red-500/20 hover:bg-red-500/30 disabled:bg-gray-700 text-red-300 disabled:text-gray-500 border border-red-500/30 py-4 rounded-2xl font-bold transition-all"
+                                        >
+                                            {processing ? "Processing..." : "Reject Submission"}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

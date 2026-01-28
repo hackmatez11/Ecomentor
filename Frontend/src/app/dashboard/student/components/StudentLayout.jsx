@@ -18,7 +18,8 @@ import {
   Bot,
   Target,
   Sparkles,
-  Gamepad2
+  Gamepad2,
+  Upload
 } from "lucide-react";
 
 export default function StudentLayout({ children }) {
@@ -78,6 +79,7 @@ export default function StudentLayout({ children }) {
     if (pathname?.includes("leaderboard")) return "leaderboard";
     if (pathname?.includes("opportunities")) return "opportunities";
     if (pathname?.includes("profile")) return "profile";
+    if (pathname?.includes("submit-action")) return "submit-action";
     return "home";
   };
 
@@ -102,6 +104,7 @@ export default function StudentLayout({ children }) {
     { id: "leaderboard", label: "Leaderboard", icon: Trophy, href: "/dashboard/student?tab=leaderboard" },
     { id: "community", label: "Community", icon: MessageSquare, href: "/dashboard/student/community" },
     { id: "opportunities", label: "Opportunities", icon: Briefcase, href: "/dashboard/student/opportunities" },
+    { id: "submit-action", label: "Submit Eco-Action", icon: Upload, href: "/dashboard/student/submit-action" },
     { id: "profile", label: "Profile", icon: User, href: "/dashboard/student?tab=profile" },
   ];
 

@@ -14,7 +14,8 @@ import {
     MapPin,
     Calendar,
     Sparkles,
-    AlertCircle
+    AlertCircle,
+    Zap,
 } from "lucide-react";
 
 export default function SubmitActionPage() {
@@ -55,13 +56,22 @@ export default function SubmitActionPage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setStudentId(user.id);
-                // Optionally fetch submission history
-                // const response = await fetch(`/api/student-submissions?studentId=${user.id}`);
-                // const data = await response.json();
-                // if (data.success) setSubmissionHistory(data.submissions);
+                fetchSubmissions(user.id);
             }
         } catch (error) {
             console.error("Error fetching student data:", error);
+        }
+    };
+
+    const fetchSubmissions = async (uid) => {
+        try {
+            const response = await fetch(`/api/student-submissions?studentId=${uid || studentId}`);
+            const data = await response.json();
+            if (data.success) {
+                setSubmissionHistory(data.submissions);
+            }
+        } catch (error) {
+            console.error("Error fetching submissions:", error);
         }
     };
 
@@ -131,6 +141,9 @@ export default function SubmitActionPage() {
                         : `✅ Submission successful! Your teacher will review it soon.`;
 
                 alert(statusMessage);
+
+                // Refresh submission history
+                fetchSubmissions();
 
                 // Reset form
                 setFormData({
@@ -342,6 +355,84 @@ export default function SubmitActionPage() {
                             )}
                         </button>
                     </form>
+                </div>
+
+                {/* Submission History */}
+                <div className="mt-12">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                            <Clock className="h-6 w-6 text-emerald-400" />
+                            Submission History
+                        </h2>
+                        <span className="text-sm text-gray-500">{submissionHistory.length} total submissions</span>
+                    </div>
+
+                    {submissionHistory.length === 0 ? (
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
+                            <AlertCircle className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                            <p className="text-gray-400 font-medium">No actions submitted yet.</p>
+                            <p className="text-sm text-gray-600 mt-1">Your eco-actions will appear here once you submit them.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {submissionHistory.map((sub) => (
+                                <div key={sub._id} className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/8 transition-all group">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div className="flex items-start gap-4">
+                                            <div className={`p-3 rounded-xl ${sub.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                sub.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                                                    'bg-amber-500/10 text-amber-400'
+                                                }`}>
+                                                <Award className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-lg text-white group-hover:text-emerald-400 transition-colors uppercase tracking-tight">
+                                                    {sub.actionType}
+                                                </h3>
+                                                <p className="text-sm text-gray-400 line-clamp-1 mb-1">{sub.description}</p>
+                                                <div className="flex items-center gap-4 text-xs text-gray-500">
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="h-3 w-3" />
+                                                        {new Date(sub.submittedAt).toLocaleDateString()}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <MapPin className="h-3 w-3" />
+                                                        {sub.location}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-white/5 pt-4 md:pt-0">
+                                            <div className="text-left md:text-right">
+                                                <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Status</p>
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${sub.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                    sub.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                                        'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                    }`}>
+                                                    {sub.status.replace('_', ' ').toUpperCase()}
+                                                </span>
+                                            </div>
+
+                                            <div className="text-right min-w-[80px]">
+                                                <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Points</p>
+                                                <div className="flex items-center justify-end gap-1.5 font-bold text-emerald-400">
+                                                    <Zap className="h-4 w-4" />
+                                                    {sub.finalPoints || sub.aiVerification?.suggestedPoints || 0}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {sub.teacherNotes && (
+                                        <div className="mt-4 p-3 bg-red-500/5 border border-red-500/10 rounded-xl text-xs text-red-300">
+                                            <span className="font-bold">Teacher Note:</span> {sub.teacherNotes}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

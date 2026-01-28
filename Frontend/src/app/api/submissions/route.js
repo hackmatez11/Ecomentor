@@ -43,24 +43,36 @@ export async function GET(request) {
 
     const { db } = await connectToDatabase();
 
-    // Build query
-    let query = {};
-
-    // Filter by teacher's classrooms if teacherId provided
-    if (teacherId && classroomIds.length > 0) {
-      query.$or = [
-        { classroomId: { $in: classroomIds } },
-        { classroomId: null }
-      ];
+    // Build base query for ownership/access
+    let baseAccessQuery = {};
+    if (teacherId) {
+      if (classroomIds.length > 0) {
+        baseAccessQuery.$or = [
+          { classroomId: { $in: classroomIds } },
+          { classroomId: null }
+        ];
+      } else {
+        // Teacher has no classrooms, show only global submissions
+        baseAccessQuery.classroomId = null;
+      }
     } else if (classroomId) {
-      query.classroomId = classroomId;
+      baseAccessQuery.classroomId = classroomId;
     }
+
+    // Combine with status filter for the main result set
+    let query = { ...baseAccessQuery };
 
     // Filter by status
     if (status && status !== 'all') {
-      query.status = status;
-    } else if (teacherId) {
-      // For teachers, only show pending and flagged by default
+      if (status === 'reviewed') {
+        query.status = { $in: ['approved', 'rejected'] };
+      } else if (status === 'active') {
+        query.status = { $in: ['pending_review', 'ai_flagged'] };
+      } else {
+        query.status = status;
+      }
+    } else if (!status && teacherId) {
+      // Default behavior if NO status is passed and it's a teacher request
       query.status = { $in: ['pending_review', 'ai_flagged'] };
     }
 
@@ -81,11 +93,18 @@ export async function GET(request) {
     }));
 
     // Calculate counts for teacher view
-    const counts = teacherId ? {
-      all: serializedSubmissions.length,
-      ai_flagged: serializedSubmissions.filter(s => s.status === 'ai_flagged').length,
-      pending_review: serializedSubmissions.filter(s => s.status === 'pending_review').length
-    } : undefined;
+    let counts = undefined;
+    if (teacherId) {
+      // Use the baseAccessQuery to get ALL submissions the teacher can see, regardless of status filter
+      const allSubmissionsForTeacher = await db.collection('action_submissions').find(baseAccessQuery).toArray();
+
+      counts = {
+        all: allSubmissionsForTeacher.length,
+        ai_flagged: allSubmissionsForTeacher.filter(s => s.status === 'ai_flagged').length,
+        pending_review: allSubmissionsForTeacher.filter(s => s.status === 'pending_review').length,
+        reviewed: allSubmissionsForTeacher.filter(s => s.status === 'approved' || s.status === 'rejected').length
+      };
+    }
 
     return NextResponse.json({
       success: true,
