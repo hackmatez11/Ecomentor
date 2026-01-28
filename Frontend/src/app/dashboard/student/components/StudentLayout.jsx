@@ -16,7 +16,8 @@ import {
   Leaf,
   Bot,
   Target,
-  Sparkles
+  Sparkles,
+  Gamepad2
 } from "lucide-react";
 
 export default function StudentLayout({ children }) {
@@ -67,6 +68,7 @@ export default function StudentLayout({ children }) {
     if (pathname === "/dashboard/student/community") return "community";
     if (pathname === "/dashboard/student/activity") return "Activity";
     if (pathname?.includes("quiz")) return "quiz";
+    if (pathname?.includes("games")) return "games";
     if (pathname?.includes("leaderboard")) return "leaderboard";
     if (pathname?.includes("opportunities")) return "opportunities";
     if (pathname?.includes("profile")) return "profile";
@@ -80,6 +82,7 @@ export default function StudentLayout({ children }) {
     { id: "learning-paths", label: "Learning Paths", icon: Sparkles, href: "/dashboard/student?tab=learning-paths" },
     { id: "tasks", label: "Recommended Tasks", icon: Target, href: "/dashboard/student?tab=tasks" },
     { id: "quiz", label: "AI Quizzes", icon: Brain, href: "/dashboard/student?tab=quiz" },
+    { id: "games", label: "Games", icon: Gamepad2, href: "/dashboard/student/games" },
     { id: "leaderboard", label: "Leaderboard", icon: Trophy, href: "/dashboard/student?tab=leaderboard" },
     { id: "community", label: "Community", icon: MessageSquare, href: "/dashboard/student/community" },
     { id: "opportunities", label: "Opportunities", icon: Briefcase, href: "/dashboard/student/opportunities" },

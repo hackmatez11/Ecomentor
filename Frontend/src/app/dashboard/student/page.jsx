@@ -14,7 +14,8 @@ import {
   TrendingUp,
   ArrowRight,
   Zap,
-  Briefcase
+  Briefcase,
+  Gamepad2
 } from "lucide-react";
 import QuizGenerator from "./QuizGenerator.jsx";
 import LearningPathGenerator from "./components/LearningPathGenerator.jsx";
@@ -331,6 +332,108 @@ export default function StudentDashboard() {
                 View Full Leaderboard
               </a>
             </div>
+          </div>
+        </div>
+
+        {/* Educational Games Preview */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Gamepad2 className="h-6 w-6 text-emerald-400" />
+              Educational Games
+            </h3>
+            <a
+              href="/dashboard/student/games"
+              className="text-emerald-400 font-semibold inline-flex items-center gap-2 hover:text-emerald-300"
+            >
+              Play All Games <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <a
+              href="/dashboard/student/games/eco-quiz"
+              className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <div className="text-5xl mb-3">🎯</div>
+              <h4 className="text-lg font-bold text-white mb-1">Eco Quiz</h4>
+              <p className="text-emerald-100 text-sm mb-3">Test your knowledge</p>
+              <div className="flex items-center gap-2 text-white text-xs">
+                <Zap className="h-3 w-3" />
+                <span>10-30 pts</span>
+              </div>
+            </a>
+            <a
+              href="/dashboard/student/games/recycling-sorting"
+              className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <div className="text-5xl mb-3">♻️</div>
+              <h4 className="text-lg font-bold text-white mb-1">Recycling</h4>
+              <p className="text-blue-100 text-sm mb-3">Sort waste correctly</p>
+              <div className="flex items-center gap-2 text-white text-xs">
+                <Zap className="h-3 w-3" />
+                <span>10+ pts</span>
+              </div>
+            </a>
+            <a
+              href="/dashboard/student/games/carbon-footprint"
+              className="bg-gradient-to-br from-green-500 to-blue-500 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <div className="text-5xl mb-3">🌍</div>
+              <h4 className="text-lg font-bold text-white mb-1">Carbon Track</h4>
+              <p className="text-green-100 text-sm mb-3">Track your impact</p>
+              <div className="flex items-center gap-2 text-white text-xs">
+                <Zap className="h-3 w-3" />
+                <span>Variable</span>
+              </div>
+            </a>
+            <a
+              href="/dashboard/student/games/energy-saver"
+              className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <div className="text-5xl mb-3">⚡</div>
+              <h4 className="text-lg font-bold text-white mb-1">Energy Saver</h4>
+              <p className="text-yellow-100 text-sm mb-3">Save energy fast</p>
+              <div className="flex items-center gap-2 text-white text-xs">
+                <Zap className="h-3 w-3" />
+                <span>Time-based</span>
+              </div>
+            </a>
+            <a
+              href="/dashboard/student/games/ocean-cleanup"
+              className="bg-gradient-to-br from-blue-600 to-cyan-500 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <div className="text-5xl mb-3">🌊</div>
+              <h4 className="text-lg font-bold text-white mb-1">Ocean Cleanup</h4>
+              <p className="text-cyan-100 text-sm mb-3">Clean the ocean</p>
+              <div className="flex items-center gap-2 text-white text-xs">
+                <Zap className="h-3 w-3" />
+                <span>500+ pts</span>
+              </div>
+            </a>
+            <a
+              href="/dashboard/student/games/tree-planting"
+              className="bg-gradient-to-br from-green-700 to-emerald-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <div className="text-5xl mb-3">🌲</div>
+              <h4 className="text-lg font-bold text-white mb-1">Tree Planting</h4>
+              <p className="text-emerald-100 text-sm mb-3">Grow a forest</p>
+              <div className="flex items-center gap-2 text-white text-xs">
+                <Zap className="h-3 w-3" />
+                <span>300 pts</span>
+              </div>
+            </a>
+            <a
+              href="/dashboard/student/games/pollinator-patrol"
+              className="bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <div className="text-5xl mb-3">🐝</div>
+              <h4 className="text-lg font-bold text-white mb-1">Pollinator</h4>
+              <p className="text-pink-100 text-sm mb-3">Match flowers</p>
+              <div className="flex items-center gap-2 text-white text-xs">
+                <Zap className="h-3 w-3" />
+                <span>225 pts</span>
+              </div>
+            </a>
           </div>
         </div>
 
