@@ -175,7 +175,7 @@ export default function TeacherDashboard() {
             </Link>
 
             <Link
-              href="/dashboard/teacher/review-queue"
+              href="/dashboard/teacher/review-actions"
               className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all relative"
             >
               {stats.pendingReviews > 0 && (

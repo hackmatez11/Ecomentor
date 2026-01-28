@@ -195,13 +195,22 @@ export default function StudentDashboard() {
               Continue your journey to make a positive environmental impact
             </p>
           </div>
-          <button
-            onClick={() => router.push("?tab=home&chat=true")}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-200/50 transition-colors"
-          >
-            <MessageSquare className="h-4 w-4" />
-            Chat with EcoBot
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/student/submit-action"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+            >
+              <Upload className="h-4 w-4" />
+              Submit Eco-Action
+            </Link>
+            <button
+              onClick={() => router.push("?tab=home&chat=true")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1a1a1a] hover:bg-[#2a2a2a] text-white font-semibold border border-white/5 transition-colors"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Chat with EcoBot
+            </button>
+          </div>
         </div>
 
         {/* Stats Overview */}
@@ -300,8 +309,14 @@ export default function StudentDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Active Tasks */}
           <div className="lg:col-span-2 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-white">Active Tasks</h3>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/dashboard/student/submit-action"
+                className="text-sm text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1.5"
+              >
+                <Upload className="h-4 w-4" />
+                Submit Action
+              </Link>
               <Link
                 href="?tab=tasks"
                 className="text-sm text-emerald-400 hover:text-emerald-300 font-semibold"
