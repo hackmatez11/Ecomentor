@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Home,
@@ -21,8 +22,10 @@ import {
 } from "lucide-react";
 
 export default function StudentLayout({ children }) {
+  const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showEcoBot, setShowEcoBot] = useState(false);
@@ -63,10 +66,13 @@ export default function StudentLayout({ children }) {
   };
 
   const getActiveTab = () => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) return tabParam;
+
     if (pathname === "/dashboard/student") return "home";
-    if (pathname === "/dashboard/student/learning") return "learning";
-    if (pathname === "/dashboard/student/community") return "community";
-    if (pathname === "/dashboard/student/activity") return "Activity";
+    if (pathname?.includes("learning")) return "learning-paths";
+    if (pathname?.includes("community")) return "community";
+    if (pathname?.includes("tasks")) return "tasks";
     if (pathname?.includes("quiz")) return "quiz";
     if (pathname?.includes("games")) return "games";
     if (pathname?.includes("leaderboard")) return "leaderboard";
@@ -90,11 +96,16 @@ export default function StudentLayout({ children }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#060606] text-gray-100">
-      <div className="mx-auto px-4 py-6 lg:grid lg:grid-cols-12 lg:gap-6">
-        {/* Sidebar */}
-        <div className="col-span-12 lg:col-span-2 h-full">
-          <div className="bg-[#0b0b0b] border border-[#111] rounded-xl p-4 space-y-2 sticky top-6 min-h-[calc(100vh-96px)]">
+    <div className="min-h-screen bg-[#060606] text-gray-100 flex overflow-hidden">
+      {/* Sidebar */}
+      <aside className="hidden lg:flex flex-col w-64 bg-[#0b0b0b] border-r border-[#111] h-screen sticky top-0">
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-8">
+            <Leaf className="text-emerald-500" size={28} />
+            <h1 className="text-2xl font-semibold text-white">EcoMentor</h1>
+          </div>
+
+          <nav className="space-y-2">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -110,65 +121,69 @@ export default function StudentLayout({ children }) {
                 </Link>
               );
             })}
-          </div>
+          </nav>
         </div>
 
-        {/* Main Content + Navbar */}
-        <div className="col-span-12 lg:col-span-10 space-y-6">
-          {/* Top Navigation Bar */}
-          <nav className="relative bg-[#0b0b0b] border border-[#111] rounded-xl px-4 py-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Leaf className="text-emerald-500" size={28} />
-                <h1 className="text-2xl font-semibold text-white">EcoMentor</h1>
-              </div>
+        <div className="mt-auto p-4 border-t border-[#111]">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors font-medium"
+          >
+            <LogOut size={20} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
 
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative p-2 hover:bg-[#111] rounded-lg transition-colors text-gray-300"
-                >
-                  <Bell size={22} />
-                  {notifications.filter(n => !n.read).length > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                  )}
-                </button>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
+        {/* Mobile Nav Placeholder or Unified Navbar */}
+        <header className="lg:hidden bg-[#0b0b0b] border-b border-[#111] p-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Leaf className="text-emerald-500" size={28} />
+            <span className="text-xl font-semibold text-white">EcoMentor</span>
+          </div>
+          {/* Mobile menu button could go here */}
+        </header>
 
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors font-semibold"
-                >
-                  <LogOut size={18} />
-                  <span>Logout</span>
-                </button>
-              </div>
+        <div className="p-6 space-y-6">
+          {/* Top Navigation Bar / Breadcrumbs / Actions */}
+          <nav className="bg-[#0b0b0b] border border-[#111] rounded-xl px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-4 text-sm text-gray-400">
+              Dashboard / <span className="text-white capitalize">{activeTab.replace("-", " ")}</span>
             </div>
 
-            {/* Notifications Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-4 top-14 w-80 bg-[#0f0f0f] rounded-lg shadow-2xl border border-[#1a1a1a] z-50">
-                <div className="p-4 border-b border-[#1a1a1a]">
-                  <h3 className="font-bold text-white">Notifications</h3>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 hover:bg-[#111] rounded-lg transition-colors text-gray-300"
+              >
+                <Bell size={22} />
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
+
+              <div className="h-8 w-[1px] bg-[#111] mx-2" />
+
+              <div className="flex items-center gap-3 px-2">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 font-bold text-xs">
+                  {(user?.user_metadata?.full_name || user?.email || "U").substring(0, 2).toUpperCase()}
                 </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {notifications.map(notif => (
-                    <div
-                      key={notif.id}
-                      className={`p-4 border-b border-[#1a1a1a] hover:bg-[#111] ${!notif.read ? "bg-[#0f1510]" : ""}`}
-                    >
-                      <p className="text-sm text-gray-200">{notif.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
-                    </div>
-                  ))}
+                <div className="hidden sm:block">
+                  <p className="text-xs font-medium text-white">
+                    {user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Eco Student"}
+                  </p>
+                  <p className="text-[10px] text-gray-500">{user?.email}</p>
                 </div>
               </div>
-            )}
+            </div>
           </nav>
 
-          {/* Main Content */}
-          <div>
+          {/* Page Content */}
+          <main>
             {children}
-          </div>
+          </main>
         </div>
       </div>
 
