@@ -14,7 +14,9 @@ import {
   Bell,
   LogOut,
   Leaf,
-  Bot
+  Bot,
+  Target,
+  Sparkles
 } from "lucide-react";
 
 export default function StudentLayout({ children }) {
@@ -63,6 +65,7 @@ export default function StudentLayout({ children }) {
     if (pathname === "/dashboard/student") return "home";
     if (pathname === "/dashboard/student/learning") return "learning";
     if (pathname === "/dashboard/student/community") return "community";
+    if (pathname === "/dashboard/student/activity") return "Activity";
     if (pathname?.includes("quiz")) return "quiz";
     if (pathname?.includes("leaderboard")) return "leaderboard";
     if (pathname?.includes("opportunities")) return "opportunities";
@@ -74,11 +77,12 @@ export default function StudentLayout({ children }) {
 
   const sidebarItems = [
     { id: "home", label: "Dashboard", icon: Home, href: "/dashboard/student" },
-    { id: "learning", label: "Learning Paths", icon: BookOpen, href: "/dashboard/student/learning" },
+    { id: "learning-paths", label: "Learning Paths", icon: Sparkles, href: "/dashboard/student?tab=learning-paths" },
+    { id: "tasks", label: "Recommended Tasks", icon: Target, href: "/dashboard/student?tab=tasks" },
     { id: "quiz", label: "AI Quizzes", icon: Brain, href: "/dashboard/student?tab=quiz" },
     { id: "leaderboard", label: "Leaderboard", icon: Trophy, href: "/dashboard/student?tab=leaderboard" },
     { id: "community", label: "Community", icon: MessageSquare, href: "/dashboard/student/community" },
-    { id: "opportunities", label: "Opportunities", icon: Briefcase, href: "/dashboard/student?tab=opportunities" },
+    { id: "opportunities", label: "Opportunities", icon: Briefcase, href: "/dashboard/student/opportunities" },
     { id: "profile", label: "Profile", icon: User, href: "/dashboard/student?tab=profile" },
   ];
 
@@ -95,9 +99,8 @@ export default function StudentLayout({ children }) {
                 <Link
                   key={item.id}
                   href={item.href}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive ? "bg-emerald-600 text-white" : "text-gray-300 hover:bg-[#111]"
-                  }`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? "bg-emerald-600 text-white" : "text-gray-300 hover:bg-[#111]"
+                    }`}
                 >
                   <Icon size={20} />
                   <span className="font-medium">{item.label}</span>
@@ -199,11 +202,10 @@ export default function StudentLayout({ children }) {
 
             {chatMessages.filter(m => m.sender === "user" || m.sender === "bot").map((msg, idx) => (
               <div key={idx} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-xs p-3 rounded-lg ${
-                  msg.sender === "user"
-                    ? "bg-emerald-500 text-[#04210f]"
-                    : "bg-[#111] text-gray-100 border border-[#1a1a1a]"
-                }`}>
+                <div className={`max-w-xs p-3 rounded-lg ${msg.sender === "user"
+                  ? "bg-emerald-500 text-[#04210f]"
+                  : "bg-[#111] text-gray-100 border border-[#1a1a1a]"
+                  }`}>
                   <p className="text-sm">{msg.text}</p>
                 </div>
               </div>

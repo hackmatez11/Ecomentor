@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Brain, Play, CheckCircle, XCircle, Award, Clock, ArrowLeft, Sparkles, BookOpen, Trophy, Target } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import PointsNotification from "./components/PointsNotification";
 
 export default function QuizGenerator() {
   const [studentClass, setStudentClass] = useState("");
@@ -12,6 +14,45 @@ export default function QuizGenerator() {
   const [showResults, setShowResults] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
   const [quizStarted, setQuizStarted] = useState(false);
+  const [educationLevel, setEducationLevel] = useState("school"); // Default fallback
+  const [user, setUser] = useState(null);
+  const [showPointsNotification, setShowPointsNotification] = useState(false);
+  const [pointsData, setPointsData] = useState(null);
+
+  useEffect(() => {
+    // Fetch user and education level
+    const fetchUserLevel = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+        // Try fetching user details to get education level
+        const { data: details } = await supabase
+          .from("user_details")
+          .select("education_level")
+          .eq("user_id", user.id)
+          .single();
+
+        if (details?.education_level) {
+          // Determine if school or college based on string content
+          const level = details.education_level.toLowerCase();
+          if (level.includes("college") || level.includes("university")) {
+            setEducationLevel("college");
+            // Set a default class if needed
+            setStudentClass("college-1");
+          } else {
+            setEducationLevel("school");
+            // Extract grade number if possible, or leave empty
+            const match = level.match(/\d+/);
+            if (match) {
+              setStudentClass(match[0]);
+            }
+          }
+        }
+      }
+    };
+    fetchUserLevel();
+  }, []);
+
 
   // Timer effect
   useEffect(() => {
@@ -29,7 +70,8 @@ export default function QuizGenerator() {
     }
   }, [quizStarted, showResults, timeLeft]);
 
-  const classOptions = [
+  // Dynamic Options based on Level
+  const schoolClassOptions = [
     { value: "6", label: "Class 6" },
     { value: "7", label: "Class 7" },
     { value: "8", label: "Class 8" },
@@ -37,11 +79,16 @@ export default function QuizGenerator() {
     { value: "10", label: "Class 10" },
     { value: "11", label: "Class 11" },
     { value: "12", label: "Class 12" },
-    { value: "college-1", label: "College Year 1" },
-    { value: "college-2", label: "College Year 2" },
-    { value: "college-3", label: "College Year 3" },
-    { value: "college-4", label: "College Year 4" }
   ];
+
+  const collegeClassOptions = [
+    { value: "college-1", label: "Freshman Year" },
+    { value: "college-2", label: "Sophomore Year" },
+    { value: "college-3", label: "Junior Year" },
+    { value: "college-4", label: "Senior Year" }
+  ];
+
+  const classOptions = educationLevel === "college" ? collegeClassOptions : schoolClassOptions;
 
   const topicOptions = [
     "Climate Change",
@@ -56,156 +103,41 @@ export default function QuizGenerator() {
     "Ocean Conservation"
   ];
 
-  // Simulated AI Quiz Generation (Replace with actual Gemini AI API call)
+  // AI Quiz Generation
   const generateQuiz = async () => {
     setIsGenerating(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Mock quiz data - Replace this with actual Gemini AI API call
-    const mockQuiz = {
-      title: `${quizTopic} Quiz for ${classOptions.find(c => c.value === studentClass)?.label}`,
-      topic: quizTopic,
-      difficulty: difficulty,
-      totalQuestions: 10,
-      timeLimit: 600,
-      questions: [
-        {
-          id: 1,
-          question: `What is the primary cause of ${quizTopic.toLowerCase()} according to recent scientific studies?`,
-          options: [
-            "Natural climate cycles",
-            "Human activities and greenhouse gas emissions",
-            "Solar radiation changes",
-            "Volcanic activity"
-          ],
-          correctAnswer: 1,
-          explanation: "Scientific consensus shows that human activities, particularly burning fossil fuels and deforestation, are the primary drivers of current climate change.",
-          points: 10
-        },
-        {
-          id: 2,
-          question: `Which renewable energy source has seen the most growth globally in the past decade?`,
-          options: [
-            "Hydroelectric power",
-            "Wind energy",
-            "Solar photovoltaic",
-            "Geothermal energy"
-          ],
-          correctAnswer: 2,
-          explanation: "Solar photovoltaic capacity has grown exponentially due to decreasing costs and technological improvements.",
-          points: 10
-        },
-        {
-          id: 3,
-          question: `What percentage of the Earth's surface is covered by oceans?`,
-          options: [
-            "50%",
-            "60%",
-            "71%",
-            "85%"
-          ],
-          correctAnswer: 2,
-          explanation: "Approximately 71% of Earth's surface is covered by oceans, which play a crucial role in regulating climate.",
-          points: 10
-        },
-        {
-          id: 4,
-          question: `Which of the following is NOT a greenhouse gas?`,
-          options: [
-            "Carbon dioxide (CO2)",
-            "Methane (CH4)",
-            "Oxygen (O2)",
-            "Nitrous oxide (N2O)"
-          ],
-          correctAnswer: 2,
-          explanation: "Oxygen is not a greenhouse gas. The main greenhouse gases are CO2, methane, nitrous oxide, and water vapor.",
-          points: 10
-        },
-        {
-          id: 5,
-          question: `What is the term for meeting present needs without compromising future generations?`,
-          options: [
-            "Conservation",
-            "Sustainability",
-            "Preservation",
-            "Environmentalism"
-          ],
-          correctAnswer: 1,
-          explanation: "Sustainability refers to meeting current needs without compromising the ability of future generations to meet their own needs.",
-          points: 10
-        },
-        {
-          id: 6,
-          question: `Which ecosystem stores the most carbon per unit area?`,
-          options: [
-            "Tropical rainforests",
-            "Grasslands",
-            "Peatlands",
-            "Oceans"
-          ],
-          correctAnswer: 2,
-          explanation: "Peatlands store more carbon per unit area than any other ecosystem, making their conservation crucial for climate regulation.",
-          points: 10
-        },
-        {
-          id: 7,
-          question: `What is the main environmental benefit of composting?`,
-          options: [
-            "Reduces water usage",
-            "Reduces landfill waste and creates nutrient-rich soil",
-            "Increases air quality",
-            "Reduces noise pollution"
-          ],
-          correctAnswer: 1,
-          explanation: "Composting reduces landfill waste, decreases methane emissions, and creates valuable organic matter for soil enrichment.",
-          points: 10
-        },
-        {
-          id: 8,
-          question: `Which international agreement aims to limit global warming to below 2°C?`,
-          options: [
-            "Kyoto Protocol",
-            "Montreal Protocol",
-            "Paris Agreement",
-            "Copenhagen Accord"
-          ],
-          correctAnswer: 2,
-          explanation: "The Paris Agreement (2015) aims to limit global temperature increase to well below 2°C above pre-industrial levels.",
-          points: 10
-        },
-        {
-          id: 9,
-          question: `What is the average time for a plastic bottle to decompose in nature?`,
-          options: [
-            "50 years",
-            "100 years",
-            "450 years",
-            "1000 years"
-          ],
-          correctAnswer: 2,
-          explanation: "Plastic bottles can take up to 450 years or more to decompose, highlighting the importance of recycling and reducing plastic use.",
-          points: 10
-        },
-        {
-          id: 10,
-          question: `Which of these actions has the highest impact on reducing your carbon footprint?`,
-          options: [
-            "Switching to LED bulbs",
-            "Recycling regularly",
-            "Reducing meat consumption",
-            "Taking shorter showers"
-          ],
-          correctAnswer: 2,
-          explanation: "Reducing meat consumption, especially beef, has one of the highest impacts on reducing individual carbon footprints due to the resources required for livestock production.",
-          points: 10
-        }
-      ]
-    };
+    try {
+      const response = await fetch("/api/generate-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: quizTopic,
+          difficulty,
+          educationLevel: educationLevel // 'school' or 'college' context passed or specific level
+        })
+      });
 
-    setQuiz(mockQuiz);
-    setIsGenerating(false);
+      if (!response.ok) {
+        throw new Error("Failed to generate quiz");
+      }
+
+      const mockQuiz = await response.json();
+
+      // Validate structure (minimal check)
+      if (!mockQuiz.questions || !Array.isArray(mockQuiz.questions)) {
+        throw new Error("Invalid quiz format received");
+      }
+
+      setQuiz(mockQuiz);
+      setTimeLeft(mockQuiz.timeLimit || 600);
+
+    } catch (error) {
+      console.error("Quiz generation failed:", error);
+      alert("Failed to generate quiz. Please try again or check your connection.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const startQuiz = () => {
@@ -243,7 +175,7 @@ export default function QuizGenerator() {
   const calculateResults = () => {
     let correct = 0;
     let totalPoints = 0;
-    
+
     quiz.questions.forEach(q => {
       if (answers[q.id] === q.correctAnswer) {
         correct++;
@@ -267,6 +199,8 @@ export default function QuizGenerator() {
     setCurrentQuestion(0);
     setAnswers({});
     setTimeLeft(600);
+    setShowPointsNotification(false);
+    setPointsData(null);
   };
 
   const formatTime = (seconds) => {
@@ -274,6 +208,47 @@ export default function QuizGenerator() {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Award points when quiz results are shown
+  useEffect(() => {
+    if (showResults && user && !pointsData) {
+      const awardQuizPoints = async () => {
+        const results = calculateResults();
+        try {
+          const response = await fetch('/api/complete-quiz', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              studentId: user.id,
+              quizId: `${quizTopic}_${Date.now()}`,
+              quizTopic: quizTopic,
+              answers: answers,
+              score: results.percentage,
+              correctAnswers: results.correct,
+              totalQuestions: results.total,
+              difficulty: difficulty
+            })
+          });
+
+          const data = await response.json();
+          if (data.success) {
+            setPointsData({
+              pointsEarned: data.pointsEarned,
+              newTotal: data.newTotalPoints,
+              rankChange: null,
+              achievement: data.achievement,
+              activityType: 'quiz'
+            });
+            setShowPointsNotification(true);
+          }
+        } catch (error) {
+          console.error('Error awarding quiz points:', error);
+        }
+      };
+      awardQuizPoints();
+    }
+  }, [showResults, user, pointsData]);
+
 
   // Quiz Setup Screen
   if (!quiz) {
@@ -300,18 +275,19 @@ export default function QuizGenerator() {
               {/* Class Selection */}
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-2">
-                  Select Your Class/Year
+                  Select Your {educationLevel === "college" ? "Year" : "Class"}
                 </label>
                 <select
                   value={studentClass}
                   onChange={(e) => setStudentClass(e.target.value)}
                   className="w-full bg-black border-2 border-zinc-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
                 >
-                  <option value="">Choose your class...</option>
+                  <option value="">Choose your level...</option>
                   {classOptions.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">Based on you being a <strong>{educationLevel}</strong> student.</p>
               </div>
 
               {/* Topic Selection */}
@@ -341,11 +317,10 @@ export default function QuizGenerator() {
                     <button
                       key={level}
                       onClick={() => setDifficulty(level)}
-                      className={`p-3 rounded-lg font-bold capitalize transition-all ${
-                        difficulty === level
-                          ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)] scale-105'
-                          : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700 border border-zinc-700'
-                      }`}
+                      className={`p-3 rounded-lg font-bold capitalize transition-all ${difficulty === level
+                        ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)] scale-105'
+                        : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700 border border-zinc-700'
+                        }`}
                     >
                       {level}
                     </button>
@@ -362,7 +337,7 @@ export default function QuizGenerator() {
                 {isGenerating ? (
                   <>
                     <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    Preparing Quiz...
+                    Generating Quiz (AI)...
                   </>
                 ) : (
                   <>
@@ -378,7 +353,7 @@ export default function QuizGenerator() {
               <div className="bg-blue-900/20 border border-blue-900/50 rounded-lg p-4 text-center">
                 <BookOpen className="text-blue-400 mx-auto mb-2" size={32} />
                 <h3 className="font-bold text-white mb-1">AI-Powered</h3>
-                <p className="text-sm text-blue-200/70">Generated using AI</p>
+                <p className="text-sm text-blue-200/70">Generated using Gemini AI</p>
               </div>
               <div className="bg-emerald-900/20 border border-emerald-900/50 rounded-lg p-4 text-center">
                 <Target className="text-emerald-400 mx-auto mb-2" size={32} />
@@ -434,10 +409,18 @@ export default function QuizGenerator() {
               <h3 className="font-bold text-yellow-500 mb-2">Instructions:</h3>
               <ul className="space-y-1 text-sm text-yellow-100/80">
                 <li>• Answer all {quiz.totalQuestions} questions within the time limit</li>
-                <li>• Each correct answer earns you 10 points</li>
+                <li>• Each correct answer earns you points (difficulty: {difficulty})</li>
                 <li>• You can navigate between questions before submitting</li>
                 <li>• Review explanations after completing the quiz</li>
               </ul>
+            </div>
+
+            {/* Potential Points Display */}
+            <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-4 mb-6 text-center">
+              <p className="text-sm text-gray-400 mb-2">Potential EcoPoints</p>
+              <p className="text-3xl font-bold text-emerald-400">
+                Up to {quiz.totalQuestions * 10 * (difficulty === 'hard' ? 2 : difficulty === 'medium' ? 1.5 : 1)} points
+              </p>
             </div>
 
             <button
@@ -456,7 +439,7 @@ export default function QuizGenerator() {
   // Quiz Taking Screen
   if (quizStarted && !showResults) {
     const question = quiz.questions[currentQuestion];
-    
+
     return (
       <div className="min-h-screen bg-black text-white p-6">
         <div className="max-w-4xl mx-auto">
@@ -496,18 +479,16 @@ export default function QuizGenerator() {
                 <button
                   key={index}
                   onClick={() => selectAnswer(question.id, index)}
-                  className={`w-full text-left p-4 rounded-lg border transition-all ${
-                    answers[question.id] === index
-                      ? 'border-emerald-500 bg-emerald-900/20'
-                      : 'border-zinc-700 bg-black hover:border-emerald-500/50 hover:bg-zinc-900'
-                  }`}
+                  className={`w-full text-left p-4 rounded-lg border transition-all ${answers[question.id] === index
+                    ? 'border-emerald-500 bg-emerald-900/20'
+                    : 'border-zinc-700 bg-black hover:border-emerald-500/50 hover:bg-zinc-900'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                      answers[question.id] === index
-                        ? 'border-emerald-500 bg-emerald-500'
-                        : 'border-zinc-500'
-                    }`}>
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${answers[question.id] === index
+                      ? 'border-emerald-500 bg-emerald-500'
+                      : 'border-zinc-500'
+                      }`}>
                       {answers[question.id] === index && (
                         <CheckCircle className="text-black" size={16} />
                       )}
@@ -561,7 +542,7 @@ export default function QuizGenerator() {
   // Results Screen
   if (showResults) {
     const results = calculateResults();
-    
+
     return (
       <div className="min-h-screen bg-black text-white p-6">
         <div className="max-w-4xl mx-auto">
@@ -583,25 +564,26 @@ export default function QuizGenerator() {
               </div>
               <div className="bg-yellow-900/10 border border-yellow-900/50 rounded-lg p-6">
                 <p className="text-gray-400 text-sm mb-1">EcoPoints Earned</p>
-                <p className="text-4xl font-bold text-yellow-500">{results.points}</p>
+                <p className="text-4xl font-bold text-yellow-500">
+                  {pointsData ? pointsData.pointsEarned : results.points}
+                </p>
               </div>
             </div>
 
             {/* Performance Message */}
-            <div className={`rounded-lg p-4 border ${
-              results.percentage >= 80 ? 'bg-emerald-900/20 border-emerald-800 text-emerald-300' :
+            <div className={`rounded-lg p-4 border ${results.percentage >= 80 ? 'bg-emerald-900/20 border-emerald-800 text-emerald-300' :
               results.percentage >= 60 ? 'bg-yellow-900/20 border-yellow-800 text-yellow-300' :
-              'bg-red-900/20 border-red-800 text-red-300'
-            }`}>
+                'bg-red-900/20 border-red-800 text-red-300'
+              }`}>
               <p className="font-bold text-lg">
                 {results.percentage >= 80 ? '🎉 Excellent Work!' :
-                 results.percentage >= 60 ? '👍 Good Job!' :
-                 '💪 Keep Learning!'}
+                  results.percentage >= 60 ? '👍 Good Job!' :
+                    '💪 Keep Learning!'}
               </p>
               <p className="text-sm mt-1 opacity-90">
                 {results.percentage >= 80 ? 'You have a strong understanding of this topic!' :
-                 results.percentage >= 60 ? 'You\'re on the right track. Review the explanations below.' :
-                 'Don\'t give up! Review the material and try again.'}
+                  results.percentage >= 60 ? 'You\'re on the right track. Review the explanations below.' :
+                    'Don\'t give up! Review the material and try again.'}
               </p>
             </div>
           </div>
@@ -613,7 +595,7 @@ export default function QuizGenerator() {
               {quiz.questions.map((question, qIndex) => {
                 const userAnswer = answers[question.id];
                 const isCorrect = userAnswer === question.correctAnswer;
-                
+
                 return (
                   <div key={question.id} className="border-b border-zinc-800 pb-6 last:border-b-0">
                     <div className="flex items-start gap-3 mb-3">
@@ -669,7 +651,22 @@ export default function QuizGenerator() {
             </button>
           </div>
         </div>
+
+        {/* Points Notification */}
+        {showPointsNotification && pointsData && (
+          <PointsNotification
+            show={showPointsNotification}
+            onClose={() => setShowPointsNotification(false)}
+            pointsEarned={pointsData.pointsEarned}
+            newTotal={pointsData.newTotal}
+            rankChange={pointsData.rankChange}
+            achievement={pointsData.achievement}
+            activityType={pointsData.activityType}
+          />
+        )}
       </div>
     );
   }
 }
+
+
