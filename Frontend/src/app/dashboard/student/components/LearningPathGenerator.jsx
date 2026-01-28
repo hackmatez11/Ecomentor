@@ -121,28 +121,55 @@ export default function LearningPathGenerator({ userId }) {
             console.log("🔍 Checking database for existing learning paths...");
             console.log("User ID:", userId);
 
-            // First, check if there are existing learning paths for this user
-            const { data: existingPaths, error: fetchError } = await supabase
-                .from("learning_paths")
-                .select("*")
-                .eq("created_by", userId)
-                .eq("is_active", true)
-                .order("created_at", { ascending: false })
-                .limit(3);
+            // Fetch both AI-generated learning paths AND teacher lesson plans
+            const [aiPathsResponse, teacherPlansResponse] = await Promise.all([
+                // AI-generated learning paths
+                supabase
+                    .from("learning_paths")
+                    .select("*")
+                    .eq("created_by", userId)
+                    .eq("is_active", true)
+                    .order("created_at", { ascending: false })
+                    .limit(3),
+                // Teacher lesson plans
+                fetch(`/api/student-lesson-plans?studentId=${userId}`)
+            ]);
+
+            const { data: existingPaths, error: fetchError } = aiPathsResponse;
+
+            // Handle teacher plans response
+            let teacherPlansData = { lessonPlans: [] };
+            if (teacherPlansResponse.ok) {
+                teacherPlansData = await teacherPlansResponse.json();
+                console.log('📚 Teacher plans response:', teacherPlansData);
+            } else {
+                console.error('❌ Failed to fetch teacher plans:', teacherPlansResponse.status);
+                const errorText = await teacherPlansResponse.text();
+                console.error('Error details:', errorText);
+            }
 
             if (fetchError) {
-                console.error("❌ Error fetching paths:", fetchError);
+                console.error("❌ Error fetching AI paths:", fetchError);
             }
 
             console.log("📊 Database query result:", {
-                pathsFound: existingPaths?.length || 0,
-                paths: existingPaths
+                aiPathsFound: existingPaths?.length || 0,
+                teacherPlansFound: teacherPlansData.lessonPlans?.length || 0,
+                teacherPlansDebug: teacherPlansData.debug
             });
 
-            // If we have existing paths, use them
-            if (existingPaths && existingPaths.length > 0) {
+            // Combine AI paths and teacher lesson plans
+            const combinedPaths = [
+                ...(existingPaths || []),
+                ...(teacherPlansData.lessonPlans || [])
+            ];
+
+            console.log('🔗 Combined paths:', combinedPaths.length, 'total');
+
+            // If we have existing paths (AI or teacher), use them
+            if (combinedPaths.length > 0) {
                 console.log("✅ Using existing learning paths from database");
-                setLearningPaths(existingPaths);
+                setLearningPaths(combinedPaths);
                 setIsGenerating(false);
                 return;
             }
@@ -189,17 +216,31 @@ export default function LearningPathGenerator({ userId }) {
 
 
     const fetchEnrolledPaths = async () => {
-        const { data } = await supabase
-            .from("student_learning_progress")
-            .select(`
-        *,
-        learning_paths (*)
-      `)
-            .eq("student_id", userId);
+        // Fetch both learning path progress and lesson plan progress
+        const [learningPathProgress, lessonPlanProgress] = await Promise.all([
+            supabase
+                .from("student_learning_progress")
+                .select(`
+                    *,
+                    learning_paths (*)
+                `)
+                .eq("student_id", userId),
+            supabase
+                .from("lesson_plan_progress")
+                .select("*")
+                .eq("student_id", userId)
+        ]);
 
-        if (data) {
-            setEnrolledPaths(data);
-        }
+        const combinedProgress = [
+            ...(learningPathProgress.data || []),
+            ...(lessonPlanProgress.data || []).map(lp => ({
+                ...lp,
+                learning_path_id: lp.lesson_plan_id, // Map to common field
+                is_lesson_plan: true
+            }))
+        ];
+
+        setEnrolledPaths(combinedProgress);
     };
 
     const addInterest = (interest) => {
@@ -250,17 +291,43 @@ export default function LearningPathGenerator({ userId }) {
 
     const enrollInPath = async (pathId) => {
         try {
-            const { error } = await supabase
-                .from("student_learning_progress")
-                .insert({
-                    student_id: userId,
-                    learning_path_id: pathId,
-                    progress_percentage: 0,
-                    current_module: 0,
-                    completed_modules: []
-                });
+            // Check if this is a teacher lesson plan
+            const path = learningPaths.find(p => p.id === pathId);
+            const isTeacherPlan = path?.is_teacher_plan;
 
-            if (error) throw error;
+            if (isTeacherPlan) {
+                // For teacher lesson plans, use lesson_plan_progress table
+                const { error } = await supabase
+                    .from("lesson_plan_progress")
+                    .insert({
+                        student_id: userId,
+                        lesson_plan_id: pathId,
+                        completed_activities: [],
+                        progress_percentage: 0,
+                        points_earned: 0
+                    });
+
+                if (error) {
+                    console.error('Error enrolling in lesson plan:', error);
+                    throw error;
+                }
+            } else {
+                // For AI-generated learning paths, use student_learning_progress table
+                const { error } = await supabase
+                    .from("student_learning_progress")
+                    .insert({
+                        student_id: userId,
+                        learning_path_id: pathId,
+                        progress_percentage: 0,
+                        current_module: 0,
+                        completed_modules: []
+                    });
+
+                if (error) {
+                    console.error('Error enrolling in learning path:', error);
+                    throw error;
+                }
+            }
 
             await fetchEnrolledPaths();
             alert("Successfully enrolled in learning path!");
@@ -272,24 +339,33 @@ export default function LearningPathGenerator({ userId }) {
     const completeModule = async (pathId, moduleIndex) => {
         setCompletingModule(`${pathId}-${moduleIndex}`);
         try {
-            const response = await fetch('/api/complete-learning-module', {
+            // Check if this is a teacher lesson plan
+            const path = learningPaths.find(p => p.id === pathId);
+            const isTeacherPlan = path?.is_teacher_plan;
+
+            const endpoint = isTeacherPlan ? '/api/complete-lesson-activity' : '/api/complete-learning-module';
+            const requestBody = isTeacherPlan
+                ? { studentId: userId, lessonPlanId: pathId, activityIndex: moduleIndex }
+                : { studentId: userId, learningPathId: pathId, moduleIndex: moduleIndex };
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentId: userId,
-                    learningPathId: pathId,
-                    moduleIndex: moduleIndex
-                })
+                body: JSON.stringify(requestBody)
             });
 
             const data = await response.json();
             if (data.success) {
+                const achievementText = isTeacherPlan
+                    ? (data.isLessonComplete ? "Lesson Plan Completed! 🎓" : null)
+                    : (data.isPathComplete ? "Path Completed! 🎓" : null);
+
                 setPointsData({
                     pointsEarned: data.totalPointsEarned,
                     newTotal: data.newTotalPoints,
                     rankChange: null,
-                    achievement: data.isPathComplete ? "Path Completed! 🎓" : null,
-                    activityType: 'learning_path'
+                    achievement: achievementText,
+                    activityType: isTeacherPlan ? 'lesson_plan' : 'learning_path'
                 });
                 setShowPointsNotification(true);
                 // Refresh enrolled paths to update progress
@@ -433,7 +509,10 @@ export default function LearningPathGenerator({ userId }) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {learningPaths.map((path) => {
-                            const isEnrolled = enrolledPaths.some(ep => ep.learning_path_id === path.id);
+                            // Check enrollment for both learning paths and lesson plans
+                            const isEnrolled = enrolledPaths.some(ep =>
+                                ep.learning_path_id === path.id || ep.lesson_plan_id === path.id
+                            );
 
                             return (
                                 <div
@@ -442,9 +521,16 @@ export default function LearningPathGenerator({ userId }) {
                                     onClick={() => setSelectedPath(path)}
                                 >
                                     <div className="flex items-start justify-between mb-3">
-                                        <span className={`px-3 py-1 rounded-full text-xs border ${getDifficultyColor(path.difficulty)}`}>
-                                            {path.difficulty}
-                                        </span>
+                                        <div className="flex gap-2">
+                                            <span className={`px-3 py-1 rounded-full text-xs border ${getDifficultyColor(path.difficulty)}`}>
+                                                {path.difficulty}
+                                            </span>
+                                            {path.is_teacher_plan && (
+                                                <span className="px-3 py-1 rounded-full text-xs border bg-blue-500/15 text-blue-300 border-blue-500/30">
+                                                    👨‍🏫 Teacher
+                                                </span>
+                                            )}
+                                        </div>
                                         {isEnrolled && (
                                             <CheckCircle className="h-5 w-5 text-emerald-400" />
                                         )}

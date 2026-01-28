@@ -138,7 +138,7 @@ export async function POST(request) {
 
   } catch (error) {
     console.error("Verification error:", error);
-    
+
     return NextResponse.json(
       { success: false, error: "Internal server error", details: error.message },
       { status: 500 }
@@ -175,7 +175,7 @@ async function verifyWithGemini({ actionType, description, location, date, estim
     });
 
     // Gemini REST API endpoint
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
 
     const prompt = `
 You are an eco-action verification AI. Analyze the images and details and respond ONLY with JSON:

@@ -51,8 +51,8 @@ export async function POST(request) {
     }
 
     // Get student details
-    const student = await db.collection('students').findOne({ 
-      _id: new ObjectId(studentId) 
+    const student = await db.collection('students').findOne({
+      _id: new ObjectId(studentId)
     });
 
     // ==========================================
@@ -86,8 +86,8 @@ export async function POST(request) {
     if (autoApproved) {
       await db.collection('students').updateOne(
         { _id: new ObjectId(studentId) },
-        { 
-          $inc: { 
+        {
+          $inc: {
             ecoPoints: aiVerification.suggestedPoints,
             completedTasks: 1
           }
@@ -126,7 +126,7 @@ export async function POST(request) {
       status,
       autoApproved,
       aiVerification: {
-        message: aiVerification.verified 
+        message: aiVerification.verified
           ? `Action verified! ${autoApproved ? 'Points awarded automatically.' : 'Pending teacher review.'}`
           : 'Action requires manual review by teacher.',
         confidence: aiVerification.confidence,
@@ -149,15 +149,15 @@ export async function POST(request) {
 async function verifyWithGemini({ actionType, description, location, date, estimatedImpact, images }) {
   try {
     // Use Gemini Pro Vision model
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     // Prepare images for Gemini (convert base64 to proper format)
     const imageParts = images.slice(0, 3).map(base64Image => {
       // Remove data URL prefix if present
-      const base64Data = base64Image.includes(',') 
-        ? base64Image.split(',')[1] 
+      const base64Data = base64Image.includes(',')
+        ? base64Image.split(',')[1]
         : base64Image;
-      
+
       // Extract mime type
       const mimeType = base64Image.includes(',')
         ? base64Image.split(',')[0].split(':')[1].split(';')[0]
@@ -210,7 +210,7 @@ async function verifyWithGemini({ actionType, description, location, date, estim
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '')
       .trim();
-    
+
     const aiResult = JSON.parse(cleanedText);
 
     return {
