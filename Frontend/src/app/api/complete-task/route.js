@@ -43,7 +43,11 @@ export async function POST(request) {
                 student_id: studentId,
                 activity_type: 'task',
                 activity_id: taskId,
-                completion_data: submissionData || {},
+                completion_data: {
+                    ...(submissionData || {}),
+                    task_title: task.title,
+                    status: 'completed'
+                },
                 points_awarded: pointsEarned,
                 impact_contribution: impactMetrics
             });

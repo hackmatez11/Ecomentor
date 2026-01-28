@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   MessageSquare,
   Trophy,
@@ -25,9 +26,9 @@ import Leaderboard from "./leaderboard/page.jsx";
 
 export default function StudentDashboard() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const activeTab = searchParams.get("tab") || "home";
   const [user, setUser] = useState(null);
-  const [showEcoBot, setShowEcoBot] = useState(false);
   const [educationLevel, setEducationLevel] = useState("");
   const [studentData, setStudentData] = useState({
     ecoPoints: 0,
@@ -58,10 +59,10 @@ export default function StudentDashboard() {
     if (user) {
       setUser(user);
 
-      // Fetch education level
+      // Fetch education level and classroom
       const { data: details } = await supabase
         .from("user_details")
-        .select("education_level")
+        .select("education_level, classroom_id")
         .eq("user_id", user.id)
         .single();
 
@@ -76,38 +77,94 @@ export default function StudentDashboard() {
         .eq("id", user.id)
         .single();
 
+      // Fetch global rank
+      const { data: rankData } = await supabase
+        .rpc('get_student_rank', { p_student_id: user.id });
+
+      // Fetch environmental impact
+      const { data: impact } = await supabase
+        .from("impact_metrics")
+        .select("*")
+        .eq("student_id", user.id)
+        .single();
+
       setStudentData({
         ecoPoints: stats?.eco_points || 0,
-        level: details?.education_level?.includes("College") ? "college" : "school",
-        classroom: "ENV-101-A",
-        rank: 12,
+        level: details?.education_level?.toLowerCase().includes("college") ? "college" : "school",
+        classroom: details?.classroom_id || "None",
+        rank: rankData?.[0]?.rank || 0,
         completedTasks: stats?.completed_tasks || 0,
-        pendingSubmissions: 3,
+        pendingSubmissions: 0, // This could be calculated from submissions state
         environmentalImpact: {
-          co2Saved: 45.5,
-          treesPlanted: 8,
-          plasticReduced: 12.3
+          co2Saved: impact?.co2_saved_kg || 0,
+          treesPlanted: impact?.trees_equivalent || 0,
+          plasticReduced: impact?.plastic_reduced_kg || 0
         }
       });
     }
   };
 
-  const fetchLearningPaths = () => {
-    // Mock data - replace with Firestore fetch
-    setLearningPaths([
-      { id: 1, title: "Water Conservation Basics", progress: 75, difficulty: "Beginner", points: 100 },
-      { id: 2, title: "Renewable Energy Systems", progress: 30, difficulty: "Intermediate", points: 150 },
-      { id: 3, title: "Sustainable Agriculture", progress: 0, difficulty: "Advanced", points: 200 }
-    ]);
+  const fetchLearningPaths = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("student_learning_progress")
+      .select(`
+        *,
+        learning_paths (*)
+      `)
+      .eq("student_id", user.id);
+
+    if (data) {
+      const formattedPaths = data.map(record => ({
+        id: record.learning_path_id,
+        title: record.learning_paths.title,
+        progress: record.progress_percentage,
+        difficulty: record.learning_paths.difficulty,
+        points: record.learning_paths.total_points
+      }));
+      setLearningPaths(formattedPaths);
+    }
   };
 
-  const fetchSubmissions = () => {
-    // Mock data
-    setSubmissions([
-      { id: 1, action: "Planted 5 trees in local park", status: "approved", points: 150, date: "2025-10-01" },
-      { id: 2, action: "Organized beach cleanup", status: "pending", points: 200, date: "2025-10-02" },
-      { id: 3, action: "Created recycling program", status: "under_review", points: 180, date: "2025-10-03" }
-    ]);
+  const fetchSubmissions = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: completions } = await supabase
+      .from("activity_completions")
+      .select("*")
+      .eq("student_id", user.id)
+      .eq("activity_type", "task")
+      .order("completed_at", { ascending: false });
+
+    if (completions && completions.length > 0) {
+      const taskIds = completions.map(c => c.activity_id);
+      const { data: tasks } = await supabase
+        .from("recommended_tasks")
+        .select("id, title")
+        .in("id", taskIds);
+
+      const taskMap = (tasks || []).reduce((acc, t) => {
+        acc[t.id] = t.title;
+        return acc;
+      }, {});
+
+      const formattedSubmissions = completions.map(sub => ({
+        id: sub.id,
+        action: sub.completion_data?.task_title || taskMap[sub.activity_id] || "Unknown Task",
+        status: sub.completion_data?.status || "completed",
+        points: sub.points_awarded,
+        date: new Date(sub.completed_at).toLocaleDateString()
+      }));
+      setSubmissions(formattedSubmissions);
+
+      setStudentData(prev => ({
+        ...prev,
+        pendingSubmissions: formattedSubmissions.filter(s => s.status === "pending").length
+      }));
+    }
   };
 
   const fetchOpportunities = () => {
@@ -139,7 +196,7 @@ export default function StudentDashboard() {
             </p>
           </div>
           <button
-            onClick={() => setShowEcoBot(true)}
+            onClick={() => router.push("?tab=home&chat=true")}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-200/50 transition-colors"
           >
             <MessageSquare className="h-4 w-4" />
@@ -197,12 +254,12 @@ export default function StudentDashboard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-white">Your Learning Paths</h3>
-            <a
-              href="/dashboard/student/learning"
+            <Link
+              href="?tab=learning-paths"
               className="text-emerald-400 font-semibold inline-flex items-center gap-2 hover:text-emerald-300"
             >
               View All <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {learningPaths.slice(0, 2).map((path) => (
@@ -245,14 +302,14 @@ export default function StudentDashboard() {
           <div className="lg:col-span-2 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-bold text-white">Active Tasks</h3>
-              <a
-                href="/dashboard/student/learning"
+              <Link
+                href="?tab=tasks"
                 className="text-sm text-emerald-400 hover:text-emerald-300 font-semibold"
               >
                 Go to tasks
-              </a>
+              </Link>
             </div>
-            {submissions.map((sub) => (
+            {submissions.slice(0, 4).map((sub) => (
               <div key={sub.id} className="bg-[#0f0f0f] rounded-2xl border border-[#1a1a1a] p-4 shadow-sm hover:shadow-lg transition-shadow">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
@@ -278,9 +335,12 @@ export default function StudentDashboard() {
                       <span>{sub.date}</span>
                     </div>
                   </div>
-                  <button className="text-sm font-semibold text-emerald-400 hover:text-emerald-300">
+                  <Link
+                    href="?tab=tasks"
+                    className="text-sm font-semibold text-emerald-400 hover:text-emerald-300"
+                  >
                     View
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -297,7 +357,7 @@ export default function StudentDashboard() {
                 "Based on your progress, explore renewable energy next!"
               </p>
               <button
-                onClick={() => setShowEcoBot(true)}
+                onClick={() => router.push("?tab=home&chat=true")}
                 className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#04210f] font-semibold py-2 rounded-xl shadow-md shadow-emerald-500/30"
               >
                 Start Conversation
@@ -342,14 +402,14 @@ export default function StudentDashboard() {
               <Gamepad2 className="h-6 w-6 text-emerald-400" />
               Educational Games
             </h3>
-            <a
-              href="/dashboard/student/games"
+            <Link
+              href="?tab=games"
               className="text-emerald-400 font-semibold inline-flex items-center gap-2 hover:text-emerald-300"
             >
               Play All Games <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <a
               href="/dashboard/student/games/eco-quiz"
               className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
@@ -408,30 +468,6 @@ export default function StudentDashboard() {
               <div className="flex items-center gap-2 text-white text-xs">
                 <Zap className="h-3 w-3" />
                 <span>500+ pts</span>
-              </div>
-            </a>
-            <a
-              href="/dashboard/student/games/tree-planting"
-              className="bg-gradient-to-br from-green-700 to-emerald-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
-            >
-              <div className="text-5xl mb-3">🌲</div>
-              <h4 className="text-lg font-bold text-white mb-1">Tree Planting</h4>
-              <p className="text-emerald-100 text-sm mb-3">Grow a forest</p>
-              <div className="flex items-center gap-2 text-white text-xs">
-                <Zap className="h-3 w-3" />
-                <span>300 pts</span>
-              </div>
-            </a>
-            <a
-              href="/dashboard/student/games/pollinator-patrol"
-              className="bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
-            >
-              <div className="text-5xl mb-3">🐝</div>
-              <h4 className="text-lg font-bold text-white mb-1">Pollinator</h4>
-              <p className="text-pink-100 text-sm mb-3">Match flowers</p>
-              <div className="flex items-center gap-2 text-white text-xs">
-                <Zap className="h-3 w-3" />
-                <span>225 pts</span>
               </div>
             </a>
           </div>

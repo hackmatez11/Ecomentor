@@ -28,7 +28,7 @@ export default function StudentLayout({ children }) {
   const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showEcoBot, setShowEcoBot] = useState(false);
+  const showEcoBot = searchParams.get("chat") === "true";
   const [ecoBotInput, setEcoBotInput] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
 
@@ -79,6 +79,16 @@ export default function StudentLayout({ children }) {
     if (pathname?.includes("opportunities")) return "opportunities";
     if (pathname?.includes("profile")) return "profile";
     return "home";
+  };
+
+  const toggleEcoBot = (open) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (open) {
+      params.set("chat", "true");
+    } else {
+      params.delete("chat");
+    }
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const activeTab = getActiveTab();
@@ -189,7 +199,7 @@ export default function StudentLayout({ children }) {
 
       {/* EcoBot Floating Button */}
       <button
-        onClick={() => setShowEcoBot(!showEcoBot)}
+        onClick={() => toggleEcoBot(!showEcoBot)}
         className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-500 hover:bg-emerald-400 text-[#04210f] font-bold rounded-full shadow-lg shadow-emerald-500/30 flex items-center justify-center transition-transform hover:scale-110 z-40"
       >
         <Bot size={24} />
@@ -204,7 +214,7 @@ export default function StudentLayout({ children }) {
               <h3 className="font-bold">EcoBot Assistant</h3>
             </div>
             <button
-              onClick={() => setShowEcoBot(false)}
+              onClick={() => toggleEcoBot(false)}
               className="text-white hover:text-gray-200"
             >
               ✕
