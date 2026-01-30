@@ -127,7 +127,7 @@ export default function RealtimeChat() {
             {showNamePopup && (
                 <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
                     <div className=" rounded-xl shadow-lg max-w-md p-6">
-                        <h1 className="text-xl font-semibold text-black">Enter your chat name</h1>
+                        <h1 className="text-xl font-semibold">Enter your chat name</h1>
                         <p className="text-sm text-gray-500 mt-1">
                             This name will be visible to other participants in the community chat
                         </p>

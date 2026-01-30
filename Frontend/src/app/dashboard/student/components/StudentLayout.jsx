@@ -51,18 +51,68 @@ export default function StudentLayout({ children }) {
     router.push("/login");
   };
 
-  const sendEcoBotMessage = () => {
-    if (ecoBotInput.trim()) {
-      setChatMessages([...chatMessages, { text: ecoBotInput, sender: "user", time: new Date() }]);
-      setEcoBotInput("");
-      // Simulate AI response
-      setTimeout(() => {
-        setChatMessages(prev => [...prev, {
-          text: "Based on your progress, I recommend focusing on the Water Conservation module next. You're doing great!",
+  const sendEcoBotMessage = async () => {
+    if (!ecoBotInput.trim()) return;
+
+    const userMessage = ecoBotInput.trim();
+    setChatMessages(prev => [...prev, { text: userMessage, sender: "user", time: new Date() }]);
+    setEcoBotInput("");
+
+    // Show loading state
+    const loadingMessage = { text: "...", sender: "bot", time: new Date(), loading: true };
+    setChatMessages(prev => [...prev, loadingMessage]);
+
+    try {
+      // Get user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Prepare chat history for API
+      const history = chatMessages
+        .filter(m => m.sender === "user" || m.sender === "bot")
+        .map(msg => ({
+          role: msg.sender === "user" ? "user" : "model",
+          parts: [{ text: msg.text }]
+        }));
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMessage,
+          history: history,
+          userId: user.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const data = await response.json();
+
+      // Remove loading message and add bot response
+      setChatMessages(prev => {
+        const filtered = prev.filter(m => !m.loading);
+        return [...filtered, {
+          text: data.reply || "Sorry, I'm having trouble connecting right now.",
           sender: "bot",
           time: new Date()
-        }]);
-      }, 1500);
+        }];
+      });
+    } catch (error) {
+      console.error("Error sending message to EcoBot:", error);
+      // Remove loading message and add error message
+      setChatMessages(prev => {
+        const filtered = prev.filter(m => !m.loading);
+        return [...filtered, {
+          text: "Sorry, I'm having trouble connecting right now. Please try again later.",
+          sender: "bot",
+          time: new Date()
+        }];
+      });
     }
   };
 
@@ -167,15 +217,6 @@ export default function StudentLayout({ children }) {
             </div>
 
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 hover:bg-[#111] rounded-lg transition-colors text-gray-300"
-              >
-                <Bell size={22} />
-                {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </button>
 
               <div className="h-8 w-[1px] bg-[#111] mx-2" />
 
@@ -237,7 +278,15 @@ export default function StudentLayout({ children }) {
                   ? "bg-emerald-500 text-[#04210f]"
                   : "bg-[#111] text-gray-100 border border-[#1a1a1a]"
                   }`}>
-                  <p className="text-sm">{msg.text}</p>
+                  {msg.loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                  )}
                 </div>
               </div>
             ))}

@@ -42,45 +42,72 @@ export async function POST(req) {
                 .eq("user_id", userId)
                 .single();
 
-            // Fetch stats (mocked table structure based on schema logic or assuming 'students' table is populated)
+            // Fetch stats
             const { data: stats } = await supabase
                 .from("students")
                 .select("eco_points, completed_tasks")
                 .eq("id", userId)
                 .single();
 
+            // Fetch impact metrics
+            const { data: impact } = await supabase
+                .from("impact_metrics")
+                .select("co2_saved_kg, trees_equivalent, plastic_reduced_kg, water_saved_liters")
+                .eq("student_id", userId)
+                .single();
+
+            // Fetch rank
+            const { data: rankData } = await supabase
+                .rpc('get_student_rank', { p_student_id: userId });
+
             if (profile) {
-                studentContext += ` Name: ${profile.full_name}. Role: ${profile.role}.`;
+                studentContext += ` Name: ${profile.full_name || 'Student'}. Role: ${profile.role}.`;
             }
             if (details) {
-                studentContext += ` Education Level: ${details.education_level}. Institution: ${details.institution}.`;
+                studentContext += ` Education Level: ${details.education_level || 'Not specified'}. Institution: ${details.institution || 'Not specified'}.`;
             }
             if (stats) {
-                studentContext += ` Current EcoPoints: ${stats.eco_points}. Completed Tasks: ${stats.completed_tasks}.`;
+                studentContext += ` Current EcoPoints: ${stats.eco_points || 0}. Completed Tasks: ${stats.completed_tasks || 0}.`;
+            }
+            if (impact) {
+                studentContext += ` Environmental Impact: CO₂ Saved: ${impact.co2_saved_kg || 0} kg, Trees Equivalent: ${impact.trees_equivalent || 0}, Plastic Reduced: ${impact.plastic_reduced_kg || 0} kg, Water Saved: ${impact.water_saved_liters || 0} liters.`;
+            }
+            if (rankData && rankData.length > 0) {
+                studentContext += ` Current Rank: #${rankData[0].rank || 'N/A'} out of ${rankData[0].total_students || 0} students.`;
             }
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-
-        const chat = model.startChat({
-            history: history || [],
-            systemInstruction: `
-        You are EcoBot, a friendly and motivating AI assistant for the EcoMentor platform.
+        const model = genAI.getGenerativeModel({
+            model: "gemini-3-flash-preview",
+            systemInstruction: {
+                parts: [{
+                    text: `
+        You are EcoBot, a friendly and motivating AI assistant for the EcoMentor platform - an environmental education platform that gamifies learning about sustainability.
         
-        Your Goal: Help students learn about sustainability, track their progress, and stay motivated.
+        Your Goal: Help students learn about sustainability, track their progress, and stay motivated through personalized guidance.
         
         Student Context:
         ${studentContext}
         
         Guidelines:
-        1. tailored to their education level (Simple for school, detailed for college).
-        2. If they ask about their points or progress, use the provided context.
-        3. Keep responses concise (max 2-3 sentences unless asked for an explanation).
-        4. Use emojis occasionally to be friendly 🌱.
-        5. Encourage real-world eco-actions.
+        1. Personalize responses based on their education level (Simple explanations for school students, detailed for college students).
+        2. When they ask about their points, progress, rank, or impact metrics, use the exact numbers from the context provided above.
+        3. Provide educational answers about environmental topics (climate change, renewable energy, conservation, recycling, etc.) tailored to their level.
+        4. Keep responses concise (2-3 sentences) unless they ask for detailed explanations.
+        5. Use emojis occasionally to be friendly and engaging 🌱🌍♻️.
+        6. Encourage real-world eco-actions and celebrate their achievements.
+        7. If they ask about topics you don't have specific data for, provide general educational information.
+        8. Be motivational and supportive, especially when discussing their progress.
+        9. Answer questions about environmental education, sustainability practices, and how to improve their environmental impact.
         
-        If you don't know something specific (like live worldwide stats), say so, but offer general info.
-      `,
+        Remember: You have access to their current EcoPoints, completed tasks, rank, and environmental impact metrics. Use this information to provide personalized responses.
+      `
+                }]
+            }
+        });
+
+        const chat = model.startChat({
+            history: history || [],
         });
 
         const result = await chat.sendMessage(message);

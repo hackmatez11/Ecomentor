@@ -91,171 +91,192 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060606] text-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#060606] text-gray-100 p-6 relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] -z-10 translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px] -z-10 -translate-x-1/2 translate-y-1/2" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-sm uppercase tracking-wide text-emerald-400">Teacher Portal</p>
-            <h1 className="text-4xl font-bold text-white mt-1">Dashboard</h1>
-            <p className="text-gray-400 mt-2">
-              Welcome back, {user?.email?.split("@")[0]}! 👋
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
+          <div className="animate-in fade-in slide-in-from-left duration-700">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="h-[2px] w-8 bg-emerald-500" />
+              <p className="text-xs uppercase tracking-widest text-emerald-400 font-bold">Teacher Portal</p>
+            </div>
+            <h1 className="text-5xl font-extrabold text-white tracking-tight">
+              Dashboard
+            </h1>
+            <p className="text-gray-400 mt-3 text-lg">
+              Welcome back, <span className="text-white font-semibold">{user?.email?.split("@")[0]}</span>! 👋
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-300 text-xl">
+          <div className="flex items-center gap-5 p-2 bg-[#0f0f0f]/50 backdrop-blur-xl border border-white/5 rounded-3xl animate-in fade-in slide-in-from-right duration-700">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/40 flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/10">
               🎓
             </div>
-            <button
-              onClick={handleLogout}
-              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#04210f] font-semibold transition-colors shadow-[0_10px_30px_rgba(16,185,129,0.35)]"
-            >
-              Logout
-            </button>
+            <div className="pr-4">
+              <button
+                onClick={handleLogout}
+                className="px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-[#04210f] font-bold transition-all hover:scale-105 active:scale-95 shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:shadow-emerald-500/40"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between pb-2">
-              <p className="text-sm text-gray-400">Total Students</p>
-              <Users className="h-5 w-5 text-emerald-400" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {[
+            { label: "Total Students", value: stats.totalStudents, icon: Users, color: "text-emerald-400", sub: "Global reach" },
+            { label: "Pending Reviews", value: stats.pendingReviews, icon: AlertCircle, color: "text-amber-400", sub: "Tasks awaiting" },
+            { label: "Lesson Plans", value: stats.activeLessonPlans, icon: BookOpen, color: "text-blue-400", sub: "Curated content" }
+          ].map((item, i) => (
+            <div key={i} className="group bg-[#0f0f0f]/40 backdrop-blur-md rounded-[2rem] border border-white/5 p-8 transition-all hover:bg-[#121212]/60 hover:border-emerald-500/20 hover:shadow-2xl hover:shadow-emerald-500/5 animate-in fade-in zoom-in duration-700 delay-100">
+              <div className="flex items-center justify-between mb-6">
+                <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 group-hover:border-emerald-500/30 group-hover:bg-emerald-500/5 transition-all`}>
+                  <item.icon className={`h-6 w-6 ${item.color}`} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-400 mb-1">{item.label}</p>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <div className="text-4xl font-black text-white">{item.value}</div>
+                <p className="text-xs text-gray-500 font-medium">{item.sub}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white">{stats.totalStudents}</div>
-            <p className="text-xs text-gray-500 mt-2">All students in the system</p>
-          </div>
-
-          <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between pb-2">
-              <p className="text-sm text-gray-400">Pending Reviews</p>
-              <AlertCircle className="h-5 w-5 text-amber-400" />
-            </div>
-            <div className="text-3xl font-bold text-white">{stats.pendingReviews}</div>
-            <p className="text-xs text-gray-500 mt-2">Submissions awaiting review</p>
-          </div>
-
-          <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between pb-2">
-              <p className="text-sm text-gray-400">Lesson Plans</p>
-              <BookOpen className="h-5 w-5 text-emerald-400" />
-            </div>
-            <div className="text-3xl font-bold text-white">{stats.activeLessonPlans}</div>
-            <p className="text-xs text-gray-500 mt-2">AI-generated & custom</p>
-          </div>
-
-          <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between pb-2">
-              <p className="text-sm text-gray-400">Class Points</p>
-              <Award className="h-5 w-5 text-emerald-400" />
-            </div>
-            <div className="text-3xl font-bold text-emerald-400">{stats.totalClassPoints}</div>
-            <p className="text-xs text-gray-500 mt-2">Total eco-points earned</p>
-          </div>
+          ))}
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="mb-12 animate-in fade-in slide-in-from-bottom duration-1000">
+          <div className="flex items-center gap-3 mb-8">
+            <h2 className="text-2xl font-bold text-white tracking-tight">Quick Actions</h2>
+            <div className="h-[1px] flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Link
               href="/dashboard/teacher/lesson-planner"
-              className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+              className="group relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-[2.5rem] p-8 transition-all hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(16,185,129,0.4)]"
             >
-              <div className="flex items-center gap-3 mb-3">
-                <Sparkles className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">AI Lesson Planner</h3>
+              <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                <Sparkles className="h-32 w-32 text-white" />
               </div>
-              <p className="text-emerald-100 text-sm">
-                Generate comprehensive lesson plans with AI assistance
-              </p>
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div>
+                  <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center mb-6 border border-white/30">
+                    <Sparkles className="h-7 w-7 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-black text-white mb-3">AI Lesson Planner</h3>
+                  <p className="text-emerald-50/80 text-sm leading-relaxed max-w-[200px]">
+                    Generate comprehensive lesson plans with AI assistance
+                  </p>
+                </div>
+                <div className="mt-8 flex items-center gap-2 text-white font-bold group-hover:translate-x-2 transition-transform">
+                  Launch <TrendingUp className="h-4 w-4" />
+                </div>
+              </div>
             </Link>
 
             <Link
               href="/dashboard/teacher/review-actions"
-              className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all relative"
+              className="group relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-8 transition-all hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(245,158,11,0.4)]"
             >
-              {stats.pendingReviews > 0 && (
-                <div className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-                  {stats.pendingReviews}
+              <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                <Clock className="h-32 w-32 text-white" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div>
+                  <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center mb-6 border border-white/30">
+                    <Clock className="h-7 w-7 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-black text-white mb-3">Review Queue</h3>
+                  <p className="text-amber-50/80 text-sm leading-relaxed max-w-[200px]">
+                    Review and approve student eco-action submissions
+                  </p>
                 </div>
-              )}
-              <div className="flex items-center gap-3 mb-3">
-                <Clock className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">Review Queue</h3>
+                <div className="mt-8 flex items-center justify-between">
+                  {stats.pendingReviews > 0 && (
+                    <div className="px-4 py-1 rounded-full bg-white text-orange-600 text-xs font-black shadow-lg">
+                      {stats.pendingReviews} NEW
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-white font-bold group-hover:translate-x-2 transition-transform">
+                    Review <TrendingUp className="h-4 w-4" />
+                  </div>
+                </div>
               </div>
-              <p className="text-amber-100 text-sm">
-                Review and approve student eco-action submissions
-              </p>
-            </Link>
-
-            <Link
-              href="/dashboard/teacher/student-progress"
-              className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <TrendingUp className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">Student Progress</h3>
-              </div>
-              <p className="text-purple-100 text-sm">
-                Monitor individual student achievements and growth
-              </p>
-            </Link>
-
-            <Link
-              href="/dashboard/teacher/lesson-plans"
-              className="bg-gradient-to-br from-cyan-500 to-teal-500 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <FileText className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">View Lesson Plans</h3>
-              </div>
-              <p className="text-cyan-100 text-sm">
-                Browse and manage your saved lesson plans
-              </p>
             </Link>
 
             <Link
               href="/dashboard/teacher/opportunities"
-              className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+              className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2.5rem] p-8 transition-all hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(99,102,241,0.4)]"
             >
-              <div className="flex items-center gap-3 mb-3">
-                <Briefcase className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">NGO Opportunities</h3>
+              <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                <Briefcase className="h-32 w-32 text-white" />
               </div>
-              <p className="text-indigo-100 text-sm">
-                Create and manage NGO opportunities for students
-              </p>
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div>
+                  <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-lg flex items-center justify-center mb-6 border border-white/30">
+                    <Briefcase className="h-7 w-7 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-black text-white mb-3">NGO Connect</h3>
+                  <p className="text-indigo-50/80 text-sm leading-relaxed max-w-[200px]">
+                    Create and manage NGO opportunities for students
+                  </p>
+                </div>
+                <div className="mt-8 flex items-center gap-2 text-white font-bold group-hover:translate-x-2 transition-transform">
+                  Manage <TrendingUp className="h-4 w-4" />
+                </div>
+              </div>
             </Link>
           </div>
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-6">
-          <h2 className="text-2xl font-bold text-white mb-4">Recent Activity</h2>
-          <div className="space-y-3">
+        <div className="bg-[#0f0f0f]/40 backdrop-blur-md rounded-[2.5rem] border border-white/5 p-10 hover:bg-[#121212]/60 transition-all animate-in fade-in slide-in-from-bottom duration-1000 delay-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+            <div>
+              <h2 className="text-3xl font-black text-white tracking-tight">System Status</h2>
+              <p className="text-gray-500 text-sm mt-1">Real-time overview of your actions</p>
+            </div>
+            {stats.pendingReviews > 0 && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl px-5 py-2 flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-amber-400 text-xs font-bold uppercase tracking-wider">Action Required</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
             {stats.pendingReviews > 0 ? (
-              <div className="flex items-center gap-3 p-4 bg-[#1a1a1a] rounded-xl">
-                <AlertCircle className="h-5 w-5 text-amber-400" />
+              <div className="group flex items-center gap-6 p-6 bg-white/5 hover:bg-white/[0.08] border border-white/5 rounded-[2rem] transition-all hover:translate-x-2">
+                <div className="h-16 w-16 rounded-[1.25rem] bg-amber-500/20 flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-8 w-8 text-amber-400" />
+                </div>
                 <div className="flex-1">
-                  <p className="text-white font-medium">
-                    {stats.pendingReviews} submission{stats.pendingReviews > 1 ? 's' : ''} awaiting review
+                  <p className="text-xl font-bold text-white mb-1">
+                    {stats.pendingReviews} Submission{stats.pendingReviews > 1 ? 's' : ''} Awaiting
                   </p>
-                  <p className="text-sm text-gray-400">Review student eco-actions to award points</p>
+                  <p className="text-gray-400">Review student eco-actions to award points and provide feedback.</p>
                 </div>
                 <Link
-                  href="/dashboard/teacher/review-queue"
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-[#04210f] rounded-lg font-semibold transition-colors"
+                  href="/dashboard/teacher/review-actions"
+                  className="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-[#04210f] rounded-2xl font-black transition-all hover:scale-105 active:scale-95 shadow-xl shadow-emerald-500/20"
                 >
-                  Review Now
+                  REVIEW NOW
                 </Link>
               </div>
             ) : (
-              <div className="flex items-center gap-3 p-4 bg-[#1a1a1a] rounded-xl">
-                <CheckCircle className="h-5 w-5 text-emerald-400" />
+              <div className="flex items-center gap-6 p-8 bg-white/5 border border-white/5 rounded-[2rem]">
+                <div className="h-16 w-16 rounded-[1.25rem] bg-emerald-500/20 flex items-center justify-center shrink-0">
+                  <CheckCircle className="h-8 w-8 text-emerald-400" />
+                </div>
                 <div>
-                  <p className="text-white font-medium">All caught up!</p>
-                  <p className="text-sm text-gray-400">No pending submissions to review</p>
+                  <p className="text-xl font-bold text-white mb-1">Queue is Empty</p>
+                  <p className="text-gray-500">Excellent! You've successfully reviewed all pending submissions.</p>
                 </div>
               </div>
             )}

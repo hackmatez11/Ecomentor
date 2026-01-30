@@ -46,12 +46,17 @@ export default function StudentDashboard() {
   const [learningPaths, setLearningPaths] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
+  const [leaderboardPreview, setLeaderboardPreview] = useState([]);
+  const [fullLeaderboard, setFullLeaderboard] = useState([]);
+  const [currentUserRank, setCurrentUserRank] = useState(null);
 
   useEffect(() => {
     fetchUserData();
     fetchLearningPaths();
     fetchSubmissions();
     fetchOpportunities();
+    fetchLeaderboardPreview();
+    fetchFullLeaderboard();
   }, []);
 
   const fetchUserData = async () => {
@@ -191,12 +196,53 @@ export default function StudentDashboard() {
     }
   };
 
+  const fetchLeaderboardPreview = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch(`/api/leaderboard?scope=global&timeframe=all_time&limit=3&userId=${user.id}`);
+      const data = await response.json();
+      
+      if (data.success && data.leaderboard) {
+        // Get top 3 for preview
+        const topThree = data.leaderboard.slice(0, 3).map(student => ({
+          rank: student.rank,
+          name: student.name,
+          points: student.ecoPoints
+        }));
+        setLeaderboardPreview(topThree);
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard preview:", error);
+      setLeaderboardPreview([]);
+    }
+  };
+
+  const fetchFullLeaderboard = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch(`/api/leaderboard?scope=global&timeframe=all_time&limit=20&userId=${user.id}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setFullLeaderboard(data.leaderboard);
+        if (data.currentUser) {
+          setCurrentUserRank({
+            rank: data.currentUser.rank,
+            points: data.currentUser.ecoPoints
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching full leaderboard:", error);
+      setFullLeaderboard([]);
+    }
+  };
+
   const renderHome = () => {
-    const leaderboardPreview = [
-      { rank: 1, name: "Sarah Chen", points: 2850 },
-      { rank: 2, name: "Marcus Johnson", points: 2640 },
-      { rank: 3, name: "Emily Rodriguez", points: 2420 },
-    ];
 
     return (
       <div className="space-y-8">
@@ -385,20 +431,28 @@ export default function StudentDashboard() {
                 <h4 className="font-semibold text-white">Top Performers</h4>
               </div>
               <div className="space-y-3">
-                {leaderboardPreview.map((entry) => (
-                  <div key={entry.rank} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${entry.rank === 1 ? "bg-emerald-500/20 text-emerald-300" : "bg-[#111] text-gray-300"
+                {leaderboardPreview.length > 0 ? (
+                  leaderboardPreview.map((entry) => (
+                    <div key={entry.rank} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                            entry.rank === 1 ? "bg-yellow-500/20 text-yellow-300" :
+                            entry.rank === 2 ? "bg-gray-400/20 text-gray-300" :
+                            entry.rank === 3 ? "bg-orange-500/20 text-orange-300" :
+                            "bg-[#111] text-gray-300"
                           }`}
-                      >
-                        {entry.rank}
+                        >
+                          {entry.rank}
+                        </div>
+                        <span className="font-medium text-white">{entry.name}</span>
                       </div>
-                      <span className="font-medium text-white">{entry.name}</span>
+                      <span className="text-sm font-semibold text-emerald-300">{entry.points}</span>
                     </div>
-                    <span className="text-sm font-semibold text-emerald-300">{entry.points}</span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-500 text-sm">Loading leaderboard...</div>
+                )}
               </div>
               <a
                 href="?tab=leaderboard"
@@ -527,65 +581,83 @@ export default function StudentDashboard() {
     );
   };
 
-  const renderLeaderboard = () => (
-    <div className="bg-[#18181b] rounded-2xl border border-zinc-800 p-6 shadow-xl">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
-        <Trophy className="text-yellow-500" />
-        Community Leaderboard
-      </h2>
+  const renderLeaderboard = () => {
+    // Combine top students with current user if not in top 20
+    const displayList = [...fullLeaderboard];
+    if (currentUserRank && !displayList.find(s => s.studentId === user?.id)) {
+      displayList.push({
+        rank: currentUserRank.rank,
+        name: "You",
+        ecoPoints: currentUserRank.points,
+        studentId: user?.id,
+        highlight: true
+      });
+    }
 
-      <div className="space-y-3">
-        {[
-          { rank: 1, name: "Sarah Chen", points: 2850, avatar: "SC" },
-          { rank: 2, name: "Marcus Johnson", points: 2640, avatar: "MJ" },
-          { rank: 3, name: "Emily Rodriguez", points: 2420, avatar: "ER" },
-          { rank: 12, name: "You", points: studentData.ecoPoints, avatar: "ME", highlight: true }
-        ].map(student => (
-          <div
-            key={student.rank}
-            className={`flex items-center justify-between p-4 rounded-lg border transition-all ${student.highlight
-              ? "bg-emerald-900/10 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-              : "bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800"
-              }`}
-          >
-            <div className="flex items-center gap-4">
-              <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold shadow-lg ${student.rank === 1 ? "bg-yellow-500 text-black" :
-                student.rank === 2 ? "bg-zinc-400 text-black" :
-                  student.rank === 3 ? "bg-orange-500 text-black" :
-                    "bg-zinc-800 text-gray-500"
-                }`}>
-                {student.rank}
-              </div>
+    return (
+      <div className="bg-[#18181b] rounded-2xl border border-zinc-800 p-6 shadow-xl">
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
+          <Trophy className="text-yellow-500" />
+          Community Leaderboard
+        </h2>
 
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border ${student.highlight
-                ? "bg-emerald-500 text-black border-emerald-400"
-                : "bg-zinc-800 text-emerald-400 border-zinc-700"
-                }`}>
-                {student.avatar}
-              </div>
+        <div className="space-y-3">
+          {displayList.length > 0 ? (
+            displayList.map(student => {
+              const isCurrentUser = student.studentId === user?.id || student.highlight;
+              const avatar = isCurrentUser ? "ME" : (student.name || "U").substring(0, 2).toUpperCase();
+              
+              return (
+                <div
+                  key={student.rank || student.studentId}
+                  className={`flex items-center justify-between p-4 rounded-lg border transition-all ${isCurrentUser
+                    ? "bg-emerald-900/10 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                    : "bg-zinc-900/50 border-zinc-800 hover:bg-zinc-800"
+                    }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold shadow-lg ${student.rank === 1 ? "bg-yellow-500 text-black" :
+                      student.rank === 2 ? "bg-zinc-400 text-black" :
+                        student.rank === 3 ? "bg-orange-500 text-black" :
+                          "bg-zinc-800 text-gray-500"
+                      }`}>
+                      {student.rank}
+                    </div>
 
-              <div>
-                <p className={`font-bold ${student.highlight ? "text-emerald-400" : "text-white"}`}>
-                  {student.name}
-                </p>
-                <p className="text-sm text-gray-400">
-                  <span className="text-emerald-500 font-medium">{student.points}</span> EcoPoints
-                </p>
-              </div>
-            </div>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border ${isCurrentUser
+                      ? "bg-emerald-500 text-black border-emerald-400"
+                      : "bg-zinc-800 text-emerald-400 border-zinc-700"
+                      }`}>
+                      {avatar}
+                    </div>
 
-            {student.rank <= 3 && (
-              <Trophy className={
-                student.rank === 1 ? "text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" :
-                  student.rank === 2 ? "text-zinc-400" :
-                    "text-orange-500"
-              } size={24} />
-            )}
-          </div>
-        ))}
+                    <div>
+                      <p className={`font-bold ${isCurrentUser ? "text-emerald-400" : "text-white"}`}>
+                        {student.name}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        <span className="text-emerald-500 font-medium">{student.ecoPoints || student.points}</span> EcoPoints
+                      </p>
+                    </div>
+                  </div>
+
+                  {student.rank <= 3 && (
+                    <Trophy className={
+                      student.rank === 1 ? "text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" :
+                        student.rank === 2 ? "text-zinc-400" :
+                          "text-orange-500"
+                    } size={24} />
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-8 text-gray-500">Loading leaderboard...</div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderProfile = () => (
     <div className="bg-[#18181b] rounded-2xl border border-zinc-800 p-6 shadow-xl">
