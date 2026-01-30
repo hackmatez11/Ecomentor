@@ -19,6 +19,7 @@ export default function LearningPathGenerator({ userId }) {
     const [interests, setInterests] = useState([]);
     const [interestInput, setInterestInput] = useState("");
     const [learningPaths, setLearningPaths] = useState([]);
+    const [completedPaths, setCompletedPaths] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState(null);
     const [selectedPath, setSelectedPath] = useState(null);
@@ -74,6 +75,7 @@ export default function LearningPathGenerator({ userId }) {
     const initializeComponent = async () => {
         await fetchEducationLevel();
         await fetchEnrolledPaths();
+        await fetchCompletedPaths();
         await fetchExistingInterestsAndGenerate();
     };
 
@@ -216,7 +218,7 @@ export default function LearningPathGenerator({ userId }) {
 
 
     const fetchEnrolledPaths = async () => {
-        // Fetch both learning path progress and lesson plan progress
+        // Fetch both learning path progress and lesson plan progress (only non-completed ones)
         const [learningPathProgress, lessonPlanProgress] = await Promise.all([
             supabase
                 .from("student_learning_progress")
@@ -224,11 +226,13 @@ export default function LearningPathGenerator({ userId }) {
                     *,
                     learning_paths (*)
                 `)
-                .eq("student_id", userId),
+                .eq("student_id", userId)
+                .is("completed_at", null), // Only fetch non-completed paths
             supabase
                 .from("lesson_plan_progress")
                 .select("*")
                 .eq("student_id", userId)
+                .is("completed_at", null) // Only fetch non-completed lesson plans
         ]);
 
         const combinedProgress = [
@@ -241,6 +245,61 @@ export default function LearningPathGenerator({ userId }) {
         ];
 
         setEnrolledPaths(combinedProgress);
+    };
+
+    const fetchCompletedPaths = async () => {
+        try {
+            // Fetch completed learning paths
+            const { data: completedLearningPaths } = await supabase
+                .from("student_learning_progress")
+                .select(`
+                    *,
+                    learning_paths (*)
+                `)
+                .eq("student_id", userId)
+                .not("completed_at", "is", null)
+                .order("completed_at", { ascending: false });
+
+            // Fetch completed lesson plans
+            const { data: completedLessonPlans } = await supabase
+                .from("lesson_plan_progress")
+                .select(`
+                    *,
+                    lesson_plans (*)
+                `)
+                .eq("student_id", userId)
+                .not("completed_at", "is", null)
+                .order("completed_at", { ascending: false });
+
+            // Combine and format completed paths
+            const combinedCompleted = [
+                ...(completedLearningPaths || [])
+                    .filter(lp => lp.learning_paths) // Filter out null joins
+                    .map(lp => ({
+                        ...lp.learning_paths,
+                        id: lp.learning_path_id,
+                        progressPercentage: lp.progress_percentage,
+                        pointsEarned: lp.points_earned,
+                        completedAt: lp.completed_at,
+                        is_lesson_plan: false
+                    })),
+                ...(completedLessonPlans || [])
+                    .filter(lp => lp.lesson_plans) // Filter out null joins
+                    .map(lp => ({
+                        ...lp.lesson_plans,
+                        id: lp.lesson_plan_id,
+                        progressPercentage: lp.progress_percentage,
+                        pointsEarned: lp.points_earned,
+                        completedAt: lp.completed_at,
+                        is_lesson_plan: true,
+                        is_teacher_plan: true
+                    }))
+            ].filter(path => path && path.id); // Filter out any null/undefined paths
+
+            setCompletedPaths(combinedCompleted);
+        } catch (error) {
+            console.error('Error fetching completed paths:', error);
+        }
     };
 
     const addInterest = (interest) => {
@@ -368,8 +427,9 @@ export default function LearningPathGenerator({ userId }) {
                     activityType: isTeacherPlan ? 'lesson_plan' : 'learning_path'
                 });
                 setShowPointsNotification(true);
-                // Refresh enrolled paths to update progress
+                // Refresh both enrolled and completed paths
                 await fetchEnrolledPaths();
+                await fetchCompletedPaths();
             }
         } catch (error) {
             console.error('Error completing module:', error);
@@ -503,12 +563,15 @@ export default function LearningPathGenerator({ userId }) {
                             className="text-emerald-400 hover:text-emerald-300 text-sm font-semibold flex items-center gap-2"
                         >
                             <RefreshCw className="h-4 w-4" />
-                            Regenerate
+                            Generate New Paths
                         </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {learningPaths.map((path) => {
+                        {learningPaths.filter(path => {
+                            // Filter out completed paths
+                            return !completedPaths.some(cp => cp.id === path.id);
+                        }).map((path) => {
                             // Check enrollment for both learning paths and lesson plans
                             const isEnrolled = enrolledPaths.some(ep =>
                                 ep.learning_path_id === path.id || ep.lesson_plan_id === path.id
@@ -609,61 +672,148 @@ export default function LearningPathGenerator({ userId }) {
 
                         <div className="space-y-4">
                             <h4 className="text-lg font-bold text-white">Modules</h4>
-                            {Array.isArray(selectedPath.modules) && selectedPath.modules.map((module, index) => (
-                                <div key={index} className="bg-[#1a1a1a] rounded-xl p-4">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <h5 className="font-semibold text-white">{index + 1}. {module.title}</h5>
-                                        <span className="text-sm text-emerald-400 font-semibold">{module.points} pts</span>
+                            {Array.isArray(selectedPath.modules) && selectedPath.modules.map((module, index) => {
+                                // Check if this module is completed
+                                const enrolledPath = enrolledPaths.find(ep => 
+                                    ep.learning_path_id === selectedPath.id || ep.lesson_plan_id === selectedPath.id
+                                );
+                                
+                                // Check if module is completed
+                                let isModuleCompleted = false;
+                                if (enrolledPath) {
+                                    if (enrolledPath.is_lesson_plan) {
+                                        // For lesson plans, check completed_activities array
+                                        const completedActivities = enrolledPath.completed_activities || [];
+                                        isModuleCompleted = completedActivities.includes(index);
+                                    } else {
+                                        // For learning paths, check completed_modules array
+                                        const completedModules = enrolledPath.completed_modules || [];
+                                        isModuleCompleted = completedModules.includes(index);
+                                    }
+                                }
+
+                                return (
+                                    <div key={index} className="bg-[#1a1a1a] rounded-xl p-4">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <h5 className="font-semibold text-white">{index + 1}. {module.title}</h5>
+                                            <div className="flex items-center gap-2">
+                                                {isModuleCompleted && (
+                                                    <CheckCircle className="h-4 w-4 text-emerald-400" />
+                                                )}
+                                                <span className="text-sm text-emerald-400 font-semibold">{module.points} pts</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-gray-400 mb-3">{module.description}</p>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <Clock className="h-3 w-3" />
+                                            {module.duration}
+                                        </div>
+                                        {module.activities && (
+                                            <div className="mt-3">
+                                                <p className="text-xs text-gray-500 mb-1">Activities:</p>
+                                                <ul className="list-disc list-inside text-sm text-gray-400 space-y-1">
+                                                    {module.activities.map((activity, i) => (
+                                                        <li key={i}>{activity}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                        {/* Complete Module Button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                completeModule(selectedPath.id, index);
+                                            }}
+                                            disabled={completingModule === `${selectedPath.id}-${index}` || isModuleCompleted}
+                                            className={`w-full mt-3 font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                                isModuleCompleted 
+                                                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 cursor-not-allowed" 
+                                                    : "bg-emerald-500 hover:bg-emerald-400 text-[#04210f]"
+                                            }`}
+                                        >
+                                            {completingModule === `${selectedPath.id}-${index}` ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Completing...
+                                                </>
+                                            ) : isModuleCompleted ? (
+                                                <>
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    Module Completed ({module.points} pts)
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    Complete Module ({module.points} pts)
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
-                                    <p className="text-sm text-gray-400 mb-3">{module.description}</p>
-                                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                                        <Clock className="h-3 w-3" />
-                                        {module.duration}
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Completed Learning Paths Section */}
+            {completedPaths.length > 0 && (
+                <div className="mt-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                            <CheckCircle className="h-6 w-6 text-emerald-400" />
+                            Completed Learning Paths
+                        </h3>
+                        <span className="text-sm text-gray-400">
+                            {completedPaths.length} path{completedPaths.length !== 1 ? 's' : ''} completed
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {completedPaths.map((path) => (
+                            <div
+                                key={path.id}
+                                className="bg-[#0f0f0f] rounded-2xl border border-emerald-500/30 p-5 opacity-75"
+                            >
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="flex gap-2">
+                                        <span className={`px-3 py-1 rounded-full text-xs border ${getDifficultyColor(path.difficulty)}`}>
+                                            {path.difficulty}
+                                        </span>
+                                        {path.is_teacher_plan && (
+                                            <span className="px-3 py-1 rounded-full text-xs border bg-blue-500/15 text-blue-300 border-blue-500/30">
+                                                👨‍🏫 Teacher
+                                            </span>
+                                        )}
                                     </div>
-                                    {module.activities && (
-                                        <div className="mt-3">
-                                            <p className="text-xs text-gray-500 mb-1">Activities:</p>
-                                            <ul className="list-disc list-inside text-sm text-gray-400 space-y-1">
-                                                {module.activities.map((activity, i) => (
-                                                    <li key={i}>{activity}</li>
-                                                ))}
-                                            </ul>
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle className="h-5 w-5 text-emerald-400" />
+                                        <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                            Completed
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <h4 className="text-lg font-bold text-white mb-2">{path.title}</h4>
+                                <p className="text-sm text-gray-400 mb-4 line-clamp-2">{path.description}</p>
+
+                                <div className="space-y-2 mb-4">
+                                    <div className="flex items-center gap-2 text-sm text-emerald-400">
+                                        <Award className="h-4 w-4" />
+                                        {path.pointsEarned || path.total_points} points earned
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                                        <Target className="h-4 w-4" />
+                                        {path.progressPercentage || 100}% complete
+                                    </div>
+                                    {path.completedAt && (
+                                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                                            <Clock className="h-4 w-4" />
+                                            Completed {new Date(path.completedAt).toLocaleDateString()}
                                         </div>
                                     )}
-                                    {/* Complete Module Button */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            completeModule(selectedPath.id, index);
-                                        }}
-                                        disabled={completingModule === `${selectedPath.id}-${index}`}
-                                        className="w-full mt-3 bg-emerald-500 hover:bg-emerald-400 text-[#04210f] font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {completingModule === `${selectedPath.id}-${index}` ? (
-                                            <>
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                Completing...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle className="h-4 w-4" />
-                                                Complete Module ({module.points} pts)
-                                            </>
-                                        )}
-                                    </button>
                                 </div>
-                            ))}
-                        </div>
-
-                        <button
-                            onClick={() => {
-                                enrollInPath(selectedPath.id);
-                                setSelectedPath(null);
-                            }}
-                            className="w-full mt-6 bg-emerald-500 hover:bg-emerald-400 text-[#04210f] font-semibold py-3 rounded-xl transition-colors"
-                        >
-                            Enroll in This Path
-                        </button>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
