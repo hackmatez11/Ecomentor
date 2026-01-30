@@ -12,7 +12,8 @@ import {
   CheckCircle,
   Clock,
   Award,
-  Sparkles
+  Sparkles,
+  Briefcase
 } from "lucide-react";
 
 export default function TeacherDashboard() {
@@ -211,6 +212,19 @@ export default function TeacherDashboard() {
               </div>
               <p className="text-cyan-100 text-sm">
                 Browse and manage your saved lesson plans
+              </p>
+            </Link>
+
+            <Link
+              href="/dashboard/teacher/opportunities"
+              className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Briefcase className="h-6 w-6 text-white" />
+                <h3 className="text-lg font-bold text-white">NGO Opportunities</h3>
+              </div>
+              <p className="text-indigo-100 text-sm">
+                Create and manage NGO opportunities for students
               </p>
             </Link>
           </div>

@@ -167,13 +167,28 @@ export default function StudentDashboard() {
     }
   };
 
-  const fetchOpportunities = () => {
-    // Mock data
-    setOpportunities([
-      { id: 1, title: "Green Peace Internship", ngo: "GreenPeace", duration: "3 months", minPoints: 1000 },
-      { id: 2, title: "Wildlife Conservation Volunteer", ngo: "WWF", duration: "2 weeks", minPoints: 500 },
-      { id: 3, title: "Climate Action Ambassador", ngo: "Climate Reality", duration: "6 months", minPoints: 1500 }
-    ]);
+  const fetchOpportunities = async () => {
+    try {
+      const response = await fetch("/api/opportunities");
+      const data = await response.json();
+      
+      if (data.success) {
+        // Transform and limit to 3 for dashboard preview
+        const formattedOpportunities = data.opportunities
+          .slice(0, 3)
+          .map(opp => ({
+            id: opp.id,
+            title: opp.title,
+            ngo: opp.ngo_name,
+            duration: opp.duration,
+            minPoints: opp.min_points
+          }));
+        setOpportunities(formattedOpportunities);
+      }
+    } catch (error) {
+      console.error("Error fetching opportunities:", error);
+      setOpportunities([]);
+    }
   };
 
   const renderHome = () => {

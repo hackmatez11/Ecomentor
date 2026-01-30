@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { 
   Briefcase, 
   Calendar, 
@@ -13,7 +14,9 @@ import {
   Search,
   ArrowRight,
   Heart,
-  Zap
+  Zap,
+  Loader2,
+  X
 } from "lucide-react";
 
 export default function NGOOpportunities() {
@@ -21,9 +24,16 @@ export default function NGOOpportunities() {
   const [filteredOpportunities, setFilteredOpportunities] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [studentPoints, setStudentPoints] = useState(1250); // Mock data
+  const [studentPoints, setStudentPoints] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [appliedOpportunities, setAppliedOpportunities] = useState(new Set());
+  const [applyingId, setApplyingId] = useState(null);
+  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
 
   useEffect(() => {
+    fetchUser();
+    fetchUserPoints();
     fetchOpportunities();
   }, []);
 
@@ -31,96 +41,100 @@ export default function NGOOpportunities() {
     filterOpportunities();
   }, [searchQuery, filterType, opportunities]);
 
-  const fetchOpportunities = () => {
-    // Mock data - replace with actual API call
-    const mockOpportunities = [
-      {
-        id: 1,
-        title: "Green Peace Internship",
-        ngo: "GreenPeace",
-        description: "Work on climate action campaigns and learn about environmental advocacy.",
-        duration: "3 months",
-        minPoints: 1000,
-        location: "Remote",
-        type: "Internship",
-        spots: 15,
-        category: "Climate Action",
-        perks: ["Certificate", "Mentorship", "Networking"],
-        deadline: "2025-12-31"
-      },
-      {
-        id: 2,
-        title: "Wildlife Conservation Volunteer",
-        ngo: "WWF",
-        description: "Participate in wildlife protection programs and habitat restoration.",
-        duration: "2 weeks",
-        minPoints: 500,
-        location: "National Parks",
-        type: "Volunteer",
-        spots: 30,
-        category: "Wildlife",
-        perks: ["Field Experience", "Certificate"],
-        deadline: "2025-11-20"
-      },
-      {
-        id: 3,
-        title: "Climate Action Ambassador",
-        ngo: "Climate Reality Project",
-        description: "Lead climate awareness programs in your community.",
-        duration: "6 months",
-        minPoints: 1500,
-        location: "Hybrid",
-        type: "Ambassador",
-        spots: 10,
-        category: "Climate Action",
-        perks: ["Training", "Certificate", "Stipend"],
-        deadline: "2026-01-15"
-      },
-      {
-        id: 4,
-        title: "Ocean Cleanup Initiative",
-        ngo: "The Ocean Cleanup",
-        description: "Join beach cleanup drives and ocean conservation efforts.",
-        duration: "1 month",
-        minPoints: 750,
-        location: "Coastal Areas",
-        type: "Volunteer",
-        spots: 50,
-        category: "Ocean Conservation",
-        perks: ["Certificate", "Diving Training"],
-        deadline: "2025-12-10"
-      },
-      {
-        id: 5,
-        title: "Renewable Energy Research Assistant",
-        ngo: "Solar Foundation",
-        description: "Assist in research projects on solar and wind energy solutions.",
-        duration: "4 months",
-        minPoints: 1200,
-        location: "Remote",
-        type: "Internship",
-        spots: 8,
-        category: "Renewable Energy",
-        perks: ["Research Credits", "Publication", "Stipend"],
-        deadline: "2025-12-25"
-      },
-      {
-        id: 6,
-        title: "Sustainable Agriculture Program",
-        ngo: "Farm Fresh Alliance",
-        description: "Learn and promote sustainable farming practices.",
-        duration: "5 weeks",
-        minPoints: 600,
-        location: "Rural Areas",
-        type: "Training",
-        spots: 25,
-        category: "Agriculture",
-        perks: ["Hands-on Training", "Certificate"],
-        deadline: "2025-11-30"
+  useEffect(() => {
+    if (user) {
+      checkAppliedOpportunities();
+    }
+  }, [user, opportunities]);
+
+  const fetchUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
       }
-    ];
-    setOpportunities(mockOpportunities);
-    setFilteredOpportunities(mockOpportunities);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+    }
+  };
+
+  const fetchUserPoints = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: student } = await supabase
+          .from("students")
+          .select("eco_points")
+          .eq("id", user.id)
+          .single();
+        
+        if (student) {
+          setStudentPoints(student.eco_points || 0);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user points:", error);
+    }
+  };
+
+  const checkAppliedOpportunities = async () => {
+    if (!user || opportunities.length === 0) return;
+
+    try {
+      const appliedSet = new Set();
+      await Promise.all(
+        opportunities.map(async (opp) => {
+          const response = await fetch(
+            `/api/opportunities/apply?studentId=${user.id}&opportunityId=${opp.id}`
+          );
+          const data = await response.json();
+          if (data.success && data.hasApplied) {
+            appliedSet.add(opp.id);
+          }
+        })
+      );
+      setAppliedOpportunities(appliedSet);
+    } catch (error) {
+      console.error("Error checking applied opportunities:", error);
+    }
+  };
+
+  const fetchOpportunities = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/opportunities");
+      const data = await response.json();
+      
+      if (data.success) {
+        // Transform database format to match UI expectations
+        const formattedOpportunities = data.opportunities.map(opp => ({
+          id: opp.id,
+          title: opp.title,
+          ngo: opp.ngo_name,
+          description: opp.description,
+          duration: opp.duration,
+          minPoints: opp.min_points,
+          location: opp.location,
+          type: opp.type,
+          spots: opp.spots,
+          category: opp.category,
+          perks: opp.perks || [],
+          deadline: opp.deadline
+        }));
+        setOpportunities(formattedOpportunities);
+        setFilteredOpportunities(formattedOpportunities);
+      } else {
+        console.error("Error fetching opportunities:", data.error);
+        setOpportunities([]);
+        setFilteredOpportunities([]);
+      }
+    } catch (error) {
+      console.error("Error fetching opportunities:", error);
+      setOpportunities([]);
+      setFilteredOpportunities([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filterOpportunities = () => {
@@ -145,9 +159,82 @@ export default function NGOOpportunities() {
 
   const isEligible = (minPoints) => studentPoints >= minPoints;
 
+  const handleApply = async (opportunityId) => {
+    if (!user) {
+      showNotification("Please log in to apply", "error");
+      return;
+    }
+
+    setApplyingId(opportunityId);
+    try {
+      const response = await fetch("/api/opportunities/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: user.id,
+          opportunityId: opportunityId
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAppliedOpportunities(prev => new Set([...prev, opportunityId]));
+        showNotification(data.message || "Application submitted successfully!", "success");
+      } else {
+        showNotification(data.error || "Failed to submit application", "error");
+      }
+    } catch (error) {
+      console.error("Error applying:", error);
+      showNotification("An error occurred. Please try again.", "error");
+    } finally {
+      setApplyingId(null);
+    }
+  };
+
+  const showNotification = (message, type) => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: "", type: "" });
+    }, 5000);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] p-6 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 text-emerald-400 animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading opportunities...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Notification */}
+        {notification.show && (
+          <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 ${
+            notification.type === "success" 
+              ? "bg-emerald-500/90 text-white border border-emerald-400" 
+              : "bg-red-500/90 text-white border border-red-400"
+          }`}>
+            {notification.type === "success" ? (
+              <CheckCircle className="h-5 w-5" />
+            ) : (
+              <X className="h-5 w-5" />
+            )}
+            <p className="font-semibold">{notification.message}</p>
+            <button
+              onClick={() => setNotification({ show: false, message: "", type: "" })}
+              className="ml-2 hover:opacity-70"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
@@ -349,25 +436,41 @@ export default function NGOOpportunities() {
                 </div>
 
                 {/* Action Button */}
-                <button
-                  disabled={!isEligible(opp.minPoints)}
-                  className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
-                    isEligible(opp.minPoints)
-                      ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]"
-                      : "bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed"
-                  }`}
-                >
-                  {isEligible(opp.minPoints) ? (
-                    <>
-                      Apply Now
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      Locked
-                    </>
-                  )}
-                </button>
+                {appliedOpportunities.has(opp.id) ? (
+                  <button
+                    disabled
+                    className="w-full py-3 rounded-xl font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Applied
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleApply(opp.id)}
+                    disabled={!isEligible(opp.minPoints) || applyingId === opp.id}
+                    className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                      isEligible(opp.minPoints) && applyingId !== opp.id
+                        ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                        : "bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed"
+                    }`}
+                  >
+                    {applyingId === opp.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Applying...
+                      </>
+                    ) : isEligible(opp.minPoints) ? (
+                      <>
+                        Apply Now
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        Locked
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           ))}
