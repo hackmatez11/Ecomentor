@@ -239,8 +239,8 @@ const handleAuth = async (e) => {
 
                   <div className="space-y-2">
                     <label className="text-emerald-50 text-sm font-semibold block">Select Your Role</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {["student", "teacher", "administrator"].map((r) => (
+                    <div className="grid grid-cols-2 gap-3">
+                      {["student", "teacher"].map((r) => (
                         <button
                           key={r}
                           type="button"

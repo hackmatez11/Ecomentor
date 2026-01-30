@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   BookOpen,
-  ClipboardCheck,
   Users,
   TrendingUp,
   FileText,
@@ -38,7 +37,17 @@ export default function TeacherDashboard() {
       if (user) {
         setUser(user);
 
-        // Fetch students count
+        // Fetch all students count (not specific to teacher)
+        const { count: totalStudentsCount, error: studentsError } = await supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', 'student');
+
+        if (studentsError) {
+          console.error('Error fetching total students:', studentsError);
+        }
+
+        // Fetch teacher's students for class points calculation
         const studentsRes = await fetch(`/api/teacher/students?teacherId=${user.id}`);
         const studentsData = await studentsRes.json();
 
@@ -53,7 +62,7 @@ export default function TeacherDashboard() {
           .eq('teacher_id', user.id);
 
         setStats({
-          totalStudents: studentsData.students?.length || 0,
+          totalStudents: totalStudentsCount || 0,
           pendingReviews: submissionsData.submissions?.length || 0,
           activeLessonPlans: lessonPlans?.length || 0,
           totalClassPoints: studentsData.students?.reduce((sum, s) => sum + s.ecoPoints, 0) || 0
@@ -113,7 +122,7 @@ export default function TeacherDashboard() {
               <Users className="h-5 w-5 text-emerald-400" />
             </div>
             <div className="text-3xl font-bold text-white">{stats.totalStudents}</div>
-            <p className="text-xs text-gray-500 mt-2">Across all classrooms</p>
+            <p className="text-xs text-gray-500 mt-2">All students in the system</p>
           </div>
 
           <div className="bg-[#0f0f0f] rounded-2xl shadow-sm border border-[#1a1a1a] p-6 hover:shadow-lg transition-shadow">
@@ -162,19 +171,6 @@ export default function TeacherDashboard() {
             </Link>
 
             <Link
-              href="/dashboard/teacher/rubric-generator"
-              className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <ClipboardCheck className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">Rubric Generator</h3>
-              </div>
-              <p className="text-blue-100 text-sm">
-                Create detailed assessment rubrics automatically
-              </p>
-            </Link>
-
-            <Link
               href="/dashboard/teacher/review-actions"
               className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all relative"
             >
@@ -202,19 +198,6 @@ export default function TeacherDashboard() {
               </div>
               <p className="text-purple-100 text-sm">
                 Monitor individual student achievements and growth
-              </p>
-            </Link>
-
-            <Link
-              href="/dashboard/teacher/classrooms"
-              className="bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl p-6 hover:shadow-lg hover:scale-105 transition-all"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Users className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">Manage Classrooms</h3>
-              </div>
-              <p className="text-pink-100 text-sm">
-                Organize and manage your classroom sections
               </p>
             </Link>
 
