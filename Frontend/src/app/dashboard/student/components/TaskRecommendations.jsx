@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import {
     Target,
     Clock,
@@ -17,6 +18,7 @@ import PointsNotification from "./PointsNotification";
 
 export default function TaskRecommendations({ userId, educationLevel }) {
     const [recommendations, setRecommendations] = useState([]);
+    const [completedTasks, setCompletedTasks] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
     const [filter, setFilter] = useState({ difficulty: "all", actionType: "all" });
@@ -26,7 +28,11 @@ export default function TaskRecommendations({ userId, educationLevel }) {
     const [isCompletingTask, setIsCompletingTask] = useState(false);
 
     useEffect(() => {
-        fetchRecommendations();
+        const loadData = async () => {
+            await fetchCompletedTasks();
+            await fetchRecommendations();
+        };
+        loadData();
     }, [userId]);
 
     const fetchRecommendations = async (regenerate = false) => {
@@ -44,12 +50,65 @@ export default function TaskRecommendations({ userId, educationLevel }) {
 
             const data = await response.json();
             if (data.success) {
-                setRecommendations(data.recommendations);
+                // Filter out completed tasks - fetch fresh completed tasks to ensure accuracy
+                const { data: completions } = await supabase
+                    .from('activity_completions')
+                    .select('activity_id')
+                    .eq('student_id', userId)
+                    .eq('activity_type', 'task');
+
+                const completedTaskIds = completions?.map(c => c.activity_id) || [];
+                const filteredRecs = data.recommendations.filter(
+                    task => !completedTaskIds.includes(task.id)
+                );
+                setRecommendations(filteredRecs);
             }
         } catch (error) {
             console.error("Error fetching recommendations:", error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchCompletedTasks = async () => {
+        try {
+            // Fetch completed tasks from activity_completions
+            const { data: completions, error } = await supabase
+                .from('activity_completions')
+                .select('activity_id, completed_at, points_awarded, completion_data')
+                .eq('student_id', userId)
+                .eq('activity_type', 'task')
+                .order('completed_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching completed tasks:', error);
+                return;
+            }
+
+            if (completions && completions.length > 0) {
+                // Get task details for completed tasks
+                const taskIds = completions.map(c => c.activity_id);
+                const { data: tasks } = await supabase
+                    .from('recommended_tasks')
+                    .select('*')
+                    .in('id', taskIds);
+
+                // Map completions with task details
+                const completedWithDetails = completions.map(completion => {
+                    const task = tasks?.find(t => t.id === completion.activity_id);
+                    return {
+                        ...task,
+                        id: completion.activity_id,
+                        completedAt: completion.completed_at,
+                        pointsEarned: completion.points_awarded,
+                        completionData: completion.completion_data
+                    };
+                }).filter(task => task.id); // Filter out any null/undefined tasks
+
+                setCompletedTasks(completedWithDetails);
+            }
+        } catch (error) {
+            console.error('Error fetching completed tasks:', error);
         }
     };
 
@@ -73,8 +132,9 @@ export default function TaskRecommendations({ userId, educationLevel }) {
                 });
                 setShowPointsNotification(true);
                 setSelectedTask(null);
-                // Refresh recommendations to update completion status
-                fetchRecommendations();
+                // Refresh both recommendations and completed tasks
+                await fetchCompletedTasks();
+                await fetchRecommendations();
             }
         } catch (error) {
             console.error('Error completing task:', error);
@@ -142,7 +202,7 @@ export default function TaskRecommendations({ userId, educationLevel }) {
                         ) : (
                             <RefreshCw className="h-4 w-4" />
                         )}
-                        Refresh
+                        Generate New Tasks
                     </button>
                 </div>
             </div>
@@ -377,6 +437,64 @@ export default function TaskRecommendations({ userId, educationLevel }) {
                                 )}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Completed Tasks Section */}
+            {completedTasks.length > 0 && (
+                <div className="mt-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                            <CheckCircle className="h-6 w-6 text-emerald-400" />
+                            Completed Tasks
+                        </h3>
+                        <span className="text-sm text-gray-400">
+                            {completedTasks.length} task{completedTasks.length !== 1 ? 's' : ''} completed
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {completedTasks.map((task, index) => (
+                            <div
+                                key={task.id || index}
+                                className="bg-[#0f0f0f] rounded-2xl border border-emerald-500/30 p-5 opacity-75"
+                            >
+                                {/* Header */}
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="h-10 w-10 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-400">
+                                        {getActionTypeIcon(task.action_type || task.actionType)}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle className="h-4 w-4 text-emerald-400" />
+                                        <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                                            Completed
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Title & Description */}
+                                <h4 className="text-lg font-bold text-white mb-2">
+                                    {task.title}
+                                </h4>
+                                <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+                                    {task.description}
+                                </p>
+
+                                {/* Metadata */}
+                                <div className="space-y-2 mb-4">
+                                    <div className="flex items-center gap-2 text-sm text-emerald-400">
+                                        <Award className="h-4 w-4" />
+                                        {task.pointsEarned || task.estimated_points || task.estimatedPoints} points earned
+                                    </div>
+                                    {task.completedAt && (
+                                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                                            <Clock className="h-4 w-4" />
+                                            {new Date(task.completedAt).toLocaleDateString()}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
