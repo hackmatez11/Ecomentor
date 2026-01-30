@@ -176,7 +176,7 @@ export default function StudentDashboard() {
     try {
       const response = await fetch("/api/opportunities");
       const data = await response.json();
-      
+
       if (data.success) {
         // Transform and limit to 3 for dashboard preview
         const formattedOpportunities = data.opportunities
@@ -203,7 +203,7 @@ export default function StudentDashboard() {
 
       const response = await fetch(`/api/leaderboard?scope=global&timeframe=all_time&limit=3&userId=${user.id}`);
       const data = await response.json();
-      
+
       if (data.success && data.leaderboard) {
         // Get top 3 for preview
         const topThree = data.leaderboard.slice(0, 3).map(student => ({
@@ -226,7 +226,7 @@ export default function StudentDashboard() {
 
       const response = await fetch(`/api/leaderboard?scope=global&timeframe=all_time&limit=20&userId=${user.id}`);
       const data = await response.json();
-      
+
       if (data.success) {
         setFullLeaderboard(data.leaderboard);
         if (data.currentUser) {
@@ -436,12 +436,11 @@ export default function StudentDashboard() {
                     <div key={entry.rank} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                            entry.rank === 1 ? "bg-yellow-500/20 text-yellow-300" :
-                            entry.rank === 2 ? "bg-gray-400/20 text-gray-300" :
-                            entry.rank === 3 ? "bg-orange-500/20 text-orange-300" :
-                            "bg-[#111] text-gray-300"
-                          }`}
+                          className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${entry.rank === 1 ? "bg-yellow-500/20 text-yellow-300" :
+                              entry.rank === 2 ? "bg-gray-400/20 text-gray-300" :
+                                entry.rank === 3 ? "bg-orange-500/20 text-orange-300" :
+                                  "bg-[#111] text-gray-300"
+                            }`}
                         >
                           {entry.rank}
                         </div>
@@ -606,7 +605,7 @@ export default function StudentDashboard() {
             displayList.map(student => {
               const isCurrentUser = student.studentId === user?.id || student.highlight;
               const avatar = isCurrentUser ? "ME" : (student.name || "U").substring(0, 2).toUpperCase();
-              
+
               return (
                 <div
                   key={student.rank || student.studentId}
@@ -670,6 +669,7 @@ export default function StudentDashboard() {
             type="email"
             value={user?.email || ""}
             disabled
+            readOnly
             className="w-full bg-zinc-900/50 border border-zinc-800 text-gray-500 rounded-lg p-3 cursor-not-allowed"
           />
         </div>
@@ -687,6 +687,7 @@ export default function StudentDashboard() {
           <input
             type="text"
             value={studentData.classroom || ""}
+            readOnly
             className="w-full bg-black border-2 border-zinc-700 text-white rounded-lg p-3 placeholder-zinc-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
             placeholder="Enter classroom code"
           />

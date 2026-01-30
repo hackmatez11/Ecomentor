@@ -155,7 +155,7 @@ export default function StudentLayout({ children }) {
     { id: "community", label: "Community", icon: MessageSquare, href: "/dashboard/student/community" },
     { id: "opportunities", label: "Opportunities", icon: Briefcase, href: "/dashboard/student/opportunities" },
     { id: "submit-action", label: "Submit Eco-Action", icon: Upload, href: "/dashboard/student/submit-action" },
-    { id: "profile", label: "Profile", icon: User, href: "/dashboard/student?tab=profile" },
+    { id: "profile", label: "Profile", icon: User, href: "/dashboard/student/profile" },
   ];
 
   return (
