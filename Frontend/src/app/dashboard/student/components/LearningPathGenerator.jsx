@@ -348,12 +348,14 @@ export default function LearningPathGenerator({ userId }) {
         }
     };
 
-    const enrollInPath = async (pathId) => {
+    const enrollInPath = async (pathId, pathObject = null) => {
         try {
-            // Check if this is a teacher lesson plan
-            const path = learningPaths.find(p => p.id === pathId);
+            // Check if this is a teacher lesson plan - check pathObject first, then learningPaths, then selectedPath
+            const path = pathObject || learningPaths.find(p => p.id === pathId) || selectedPath;
             const isTeacherPlan = path?.is_teacher_plan;
 
+            let enrollmentSuccess = false;
+            
             if (isTeacherPlan) {
                 // For teacher lesson plans, use lesson_plan_progress table
                 const { error } = await supabase
@@ -367,8 +369,16 @@ export default function LearningPathGenerator({ userId }) {
                     });
 
                 if (error) {
-                    console.error('Error enrolling in lesson plan:', error);
-                    throw error;
+                    // If it's a duplicate key error, the student is already enrolled
+                    if (error.code === '23505') {
+                        console.log('Already enrolled in this lesson plan');
+                        enrollmentSuccess = true; // Consider this a success since they're enrolled
+                    } else {
+                        console.error('Error enrolling in lesson plan:', error);
+                        throw error;
+                    }
+                } else {
+                    enrollmentSuccess = true;
                 }
             } else {
                 // For AI-generated learning paths, use student_learning_progress table
@@ -383,14 +393,27 @@ export default function LearningPathGenerator({ userId }) {
                     });
 
                 if (error) {
-                    console.error('Error enrolling in learning path:', error);
-                    throw error;
+                    // If it's a duplicate key error, the student is already enrolled
+                    if (error.code === '23505') {
+                        console.log('Already enrolled in this learning path');
+                        enrollmentSuccess = true; // Consider this a success since they're enrolled
+                    } else {
+                        console.error('Error enrolling in learning path:', error);
+                        throw error;
+                    }
+                } else {
+                    enrollmentSuccess = true;
                 }
             }
 
+            // Always refresh enrolled paths to update UI, even if already enrolled
             await fetchEnrolledPaths();
-            alert("Successfully enrolled in learning path!");
+            
+            if (enrollmentSuccess) {
+                alert("Successfully enrolled in learning path!");
+            }
         } catch (err) {
+            console.error('Enrollment error:', err);
             alert("Error enrolling: " + err.message);
         }
     };
@@ -398,8 +421,8 @@ export default function LearningPathGenerator({ userId }) {
     const completeModule = async (pathId, moduleIndex) => {
         setCompletingModule(`${pathId}-${moduleIndex}`);
         try {
-            // Check if this is a teacher lesson plan
-            const path = learningPaths.find(p => p.id === pathId);
+            // Check if this is a teacher lesson plan - check both learningPaths and selectedPath
+            const path = learningPaths.find(p => p.id === pathId) || selectedPath;
             const isTeacherPlan = path?.is_teacher_plan;
 
             const endpoint = isTeacherPlan ? '/api/complete-lesson-activity' : '/api/complete-learning-module';
@@ -427,9 +450,19 @@ export default function LearningPathGenerator({ userId }) {
                     activityType: isTeacherPlan ? 'lesson_plan' : 'learning_path'
                 });
                 setShowPointsNotification(true);
+                
+                // Small delay to ensure database update completes
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
                 // Refresh both enrolled and completed paths
                 await fetchEnrolledPaths();
                 await fetchCompletedPaths();
+                
+                // If the path is completed, refresh learning paths to filter it out
+                if (data.isLessonComplete || data.isPathComplete) {
+                    // Refetch existing paths without regenerating
+                    await fetchOrGeneratePaths(interests);
+                }
             }
         } catch (error) {
             console.error('Error completing module:', error);
@@ -619,9 +652,9 @@ export default function LearningPathGenerator({ userId }) {
 
                                     {!isEnrolled ? (
                                         <button
-                                            onClick={(e) => {
+                                            onClick={async (e) => {
                                                 e.stopPropagation();
-                                                enrollInPath(path.id);
+                                                await enrollInPath(path.id, path);
                                             }}
                                             className="w-full bg-emerald-500 hover:bg-emerald-400 text-[#04210f] font-semibold py-2 rounded-xl transition-colors flex items-center justify-center gap-2"
                                         >
@@ -681,7 +714,10 @@ export default function LearningPathGenerator({ userId }) {
                                 // Check if module is completed
                                 let isModuleCompleted = false;
                                 if (enrolledPath) {
-                                    if (enrolledPath.is_lesson_plan) {
+                                    // Check if this is a teacher lesson plan (either from enrolledPath flag or selectedPath flag)
+                                    const isTeacherPlan = enrolledPath.is_lesson_plan || selectedPath.is_teacher_plan;
+                                    
+                                    if (isTeacherPlan) {
                                         // For lesson plans, check completed_activities array
                                         const completedActivities = enrolledPath.completed_activities || [];
                                         isModuleCompleted = completedActivities.includes(index);

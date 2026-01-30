@@ -45,18 +45,23 @@ export async function POST(request) {
 
         let completedActivities = [];
         let isNewCompletion = false;
+        let initialProgressPercentage = 0;
 
         if (!progress) {
             // Create new progress record
             completedActivities = [activityIndex];
+            initialProgressPercentage = Math.round((1 / totalActivities) * 100);
+            const isComplete = initialProgressPercentage === 100;
+            
             const { data: newProgress, error: insertError } = await supabase
                 .from('lesson_plan_progress')
                 .insert({
                     student_id: studentId,
                     lesson_plan_id: lessonPlanId,
                     completed_activities: completedActivities,
-                    progress_percentage: Math.round((1 / totalActivities) * 100),
-                    points_earned: pointsPerActivity
+                    progress_percentage: initialProgressPercentage,
+                    points_earned: pointsPerActivity,
+                    completed_at: isComplete ? new Date().toISOString() : null
                 })
                 .select()
                 .single();
@@ -81,14 +86,21 @@ export async function POST(request) {
                 const newProgressPercentage = Math.round((completedActivities.length / totalActivities) * 100);
                 const newPointsEarned = completedActivities.length * pointsPerActivity;
 
+                // Only set completed_at if reaching 100%, don't overwrite if already completed
+                const updateData = {
+                    completed_activities: completedActivities,
+                    progress_percentage: newProgressPercentage,
+                    points_earned: newPointsEarned
+                };
+                
+                // Only set completed_at if reaching 100% and not already completed
+                if (newProgressPercentage >= 100 && !progress.completed_at) {
+                    updateData.completed_at = new Date().toISOString();
+                }
+                
                 const { error: updateError } = await supabase
                     .from('lesson_plan_progress')
-                    .update({
-                        completed_activities: completedActivities,
-                        progress_percentage: newProgressPercentage,
-                        points_earned: newPointsEarned,
-                        completed_at: newProgressPercentage === 100 ? new Date().toISOString() : null
-                    })
+                    .update(updateData)
                     .eq('id', progress.id);
 
                 if (updateError) {
@@ -134,6 +146,10 @@ export async function POST(request) {
                     }
                 });
 
+            // Recalculate completion status after update
+            const finalProgressPercentage = progress ? 
+                Math.round((completedActivities.length / totalActivities) * 100) : 
+                initialProgressPercentage;
             const isLessonComplete = completedActivities.length === totalActivities;
 
             return NextResponse.json({
@@ -141,7 +157,7 @@ export async function POST(request) {
                 totalPointsEarned: pointsPerActivity,
                 newTotalPoints: newEcoPoints,
                 isLessonComplete: isLessonComplete,
-                progressPercentage: Math.round((completedActivities.length / totalActivities) * 100)
+                progressPercentage: finalProgressPercentage
             });
         } else {
             return NextResponse.json({
